@@ -84,15 +84,21 @@ replacement retires the older record as `SUPERSEDED`.
 
 ## Public judge demo
 
-The repository includes a root `Dockerfile` and `render.yaml` for a
-judge-accessible deployment. The hosted configuration intentionally runs without
-private credentials and labels its context source as `deterministic_fixture`.
-It demonstrates the complete decision, approval, invalidation, revalidation, and
-audit workflow.
+The public judge demo is hosted without billing details through GitHub Pages:
+
+**[Open the DecisionGraph judge demo](https://destr0yering.github.io/decisiongraph/)**
+
+The browser demo intentionally runs without private credentials and labels its
+context source as `deterministic_fixture`. It demonstrates the complete
+decision, approval, invalidation, revalidation, supersession, and audit workflow
+using browser-local storage.
 
 The full local quickstart above is the authoritative live DataHub MCP path. It
 uses real governed entities and schemas and projects approved decisions back as
 DataHub Documents.
+
+The repository also includes a root `Dockerfile` and `render.yaml` for anyone
+who prefers a container-hosted demo.
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Destr0yering/decisiongraph)
 

@@ -62,6 +62,9 @@ function selectedDecision() {
 }
 
 async function fetchJson(url, options) {
+  if (window.DecisionGraphStaticDemo) {
+    return window.DecisionGraphStaticDemo.request(url, options);
+  }
   const response = await fetch(url, options);
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
@@ -234,7 +237,9 @@ async function loadAppHealth() {
   elements.modeLabel.textContent =
     payload.mode === "datahub-mcp"
       ? "DataHub MCP agent"
-      : "Deterministic demo";
+      : payload.mode === "static-demo"
+        ? "Static judge demo"
+        : "Deterministic demo";
 }
 
 async function act(label, action) {
