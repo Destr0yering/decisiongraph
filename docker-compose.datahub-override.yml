@@ -1,0 +1,18 @@
+services:
+  datahub-actions-quickstart:
+    volumes: !reset []
+  datahub-gms-quickstart:
+    environment:
+      JAVA_OPTS: -Xms256m -Xmx384m
+    volumes: !reset []
+  frontend-quickstart:
+    volumes: !reset []
+  opensearch:
+    environment:
+      OPENSEARCH_JAVA_OPTS: -Xms256m -Xmx384m -Dlog4j2.formatMsgNoLookups=true
+    image: opensearchproject/opensearch:2.19.2
+  kafka-broker:
+    environment:
+      KAFKA_HEAP_OPTS: -Xms128m -Xmx256m
+  system-update-quickstart:
+    volumes: !reset []

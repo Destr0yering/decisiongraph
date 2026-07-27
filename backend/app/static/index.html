@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DecisionGraph Console</title>
+    <link rel="stylesheet" href="./assets/dashboard.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="rail">
+        <div class="rail-top">
+          <div class="badge">DG-47</div>
+          <div class="stack">
+            <span class="stack-label">DecisionGraph</span>
+            <span class="stack-subtitle">Lineage Console</span>
+          </div>
+        </div>
+        <div class="rail-block">
+          <div class="rail-kicker">Mode</div>
+          <div class="rail-value" id="modeLabel">Deterministic demo</div>
+        </div>
+        <div class="rail-block">
+          <div class="rail-kicker">Signal</div>
+          <div class="rail-value" id="datahubStatus">Checking DataHub link</div>
+        </div>
+        <div class="rail-actions">
+          <button class="lcars-button primary" id="runDecisionButton">Run Decision</button>
+          <button class="lcars-button" id="refreshButton">Refresh</button>
+          <button class="lcars-button warning" id="invalidateButton">Invalidate Selected</button>
+        </div>
+      </aside>
+
+      <main class="bridge">
+        <header class="hero">
+          <div>
+            <div class="eyebrow">Operational display</div>
+            <h1>Decision lineage, approval, and recall</h1>
+            <p>
+              A calm control surface for tracing AI-assisted decisions through
+              DataHub dependencies and revalidation history.
+            </p>
+          </div>
+          <div class="status-cluster">
+            <div class="status-card">
+              <span class="status-label">Decision Count</span>
+              <strong id="decisionCount">0</strong>
+            </div>
+            <div class="status-card">
+              <span class="status-label">Attention</span>
+              <strong id="attentionCount">0</strong>
+            </div>
+          </div>
+        </header>
+
+        <section class="panel-grid">
+          <section class="panel panel-list">
+            <div class="panel-header">
+              <div>
+                <div class="panel-kicker">Queue</div>
+                <h2>Decision Registry</h2>
+              </div>
+              <div class="panel-chip" id="queueSummary">No records</div>
+            </div>
+            <div class="decision-list" id="decisionList"></div>
+          </section>
+
+          <section class="panel panel-detail">
+            <div class="panel-header">
+              <div>
+                <div class="panel-kicker">Selected record</div>
+                <h2 id="decisionTitle">Awaiting selection</h2>
+              </div>
+              <div class="panel-chip" id="decisionStatusChip">Idle</div>
+            </div>
+
+            <div class="detail-grid">
+              <article class="detail-card">
+                <div class="detail-kicker">Summary</div>
+                <p id="decisionSummary">Run a decision to begin the demo workflow.</p>
+              </article>
+
+              <article class="detail-card">
+                <div class="detail-kicker">Workflow Controls</div>
+                <div class="action-row">
+                  <button class="lcars-button primary" id="approveButton">Approve</button>
+                  <button class="lcars-button accent" id="revalidateButton">Revalidate</button>
+                  <button class="lcars-button" id="syncButton">Sync to DataHub</button>
+                </div>
+                <div class="meta-grid">
+                  <div>
+                    <span class="meta-label">Projection</span>
+                    <strong id="projectionStatus">NOT_CONFIGURED</strong>
+                  </div>
+                  <div>
+                    <span class="meta-label">Supersedes</span>
+                    <strong id="supersedesValue">None</strong>
+                  </div>
+                  <div>
+                    <span class="meta-label">Context Source</span>
+                    <strong id="contextSource">Not loaded</strong>
+                  </div>
+                  <div>
+                    <span class="meta-label">MCP Tools</span>
+                    <strong id="contextTools">None</strong>
+                  </div>
+                </div>
+                <p class="error-text" id="projectionError"></p>
+              </article>
+
+              <article class="detail-card">
+                <div class="detail-kicker">Dependencies</div>
+                <div class="dependency-list" id="dependencyList"></div>
+              </article>
+
+              <article class="detail-card">
+                <div class="detail-kicker">Evidence</div>
+                <ul class="evidence-list" id="evidenceList"></ul>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel panel-audit">
+            <div class="panel-header">
+              <div>
+                <div class="panel-kicker">Audit trace</div>
+                <h2>Lifecycle Events</h2>
+              </div>
+              <div class="panel-chip" id="auditCount">0 events</div>
+            </div>
+            <div class="audit-list" id="auditList"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="./assets/dashboard.js" defer></script>
+  </body>
+</html>

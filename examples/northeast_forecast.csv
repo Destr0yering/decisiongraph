@@ -1,0 +1,4 @@
+product_id,region,forecast_units,forecast_horizon_days,generated_date
+SKU-DG-101,Northeast,140,30,2026-07-26
+SKU-DG-102,Northeast,115,30,2026-07-26
+SKU-DG-103,Northeast,92,30,2026-07-26

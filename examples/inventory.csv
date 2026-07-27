@@ -1,0 +1,4 @@
+product_id,region,on_hand_units,reorder_point,snapshot_date
+SKU-DG-101,Northeast,60,100,2026-07-26
+SKU-DG-102,Northeast,45,90,2026-07-26
+SKU-DG-103,Northeast,30,75,2026-07-26

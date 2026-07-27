@@ -1,0 +1,54 @@
+DECISIONGRAPH — GOVERNED DECISIONS IN MOTION
+Target duration: approximately 2 minutes
+
+SLIDE 1 — OPENING
+AI agents can make recommendations. DecisionGraph makes those recommendations
+governable. In the next two minutes, we’ll follow one inventory decision from
+trusted DataHub context, through human approval, into the catalog—and then
+safely revalidate it when conditions change.
+
+SLIDE 2 — THE PROBLEM
+A useful recommendation is not enough. A governed organization must also prove
+which data shaped it, who approved it, what action followed, and how the
+decision responds when the underlying evidence changes. DecisionGraph captures
+that missing operational memory.
+
+SLIDE 3 — CONTROLLED LIFECYCLE
+The workflow begins when the agent runs. It stores a pending decision instead
+of taking action immediately. A human approval unlocks the DataHub projection.
+If conditions later change, invalidation marks the decision for review, and
+revalidation creates a fresh replacement with a traceable supersedes
+relationship.
+
+SLIDE 4 — GOVERNED MCP CONTEXT
+At decision time, the agent calls the official DataHub MCP server. It retrieves
+the governed entities and their schema fields. DecisionGraph stores the context
+source, exact tool names, fetch time, selected facts, and a pruned snapshot
+beside the recommendation—so the evidence is inspectable later.
+
+SLIDE 5 — EVIDENCE BEFORE APPROVAL
+The prototype’s sample decision identifies three governed Northeast reorder
+candidates, confirms fresh forecast coverage within the configured horizon, and
+records the five inventory plus five forecast fields considered. That proof is
+visible before the approver can authorize any catalog write.
+
+SLIDE 6 — DATAHUB PROJECTION
+After approval, DecisionGraph projects a real DataHub Document. The document
+receives its own URN and links back to both governed datasets. The live test
+read the artifact back successfully, confirming two related datasets and a
+non-global scope.
+
+SLIDE 7 — SAFE REVALIDATION
+When a source condition changes, DecisionGraph stores the invalidation event
+even if no current decision matches. Revalidation then fetches fresh MCP
+context before creating a replacement. The original remains intact, and the
+new decision points back through a unique supersedes edge.
+
+SLIDE 8 — CLOSE
+The result is a closed loop for accountable AI decisions: governed context
+enters, a reviewable recommendation is created, human approval controls
+projection, and later changes trigger traceable revalidation. The prototype
+passed all ten automated checks, live MCP retrieval, real DataHub projection
+readback, browser workflow, and mobile layout verification.
+
+DecisionGraph: run, review, trace, and revalidate.

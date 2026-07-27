@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: decisiongraph
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: DATAHUB_MCP_ENABLED
+        value: "false"
+      - key: DECISIONGRAPH_DB_PATH
+        value: /tmp/decisiongraph.db

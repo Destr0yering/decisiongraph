@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+!.env.example
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.venv
+**/dist
+**/build
+**/*.db
+**/*.egg-info
+AGENTS.md
+sources
+docs/demo-video

@@ -1,0 +1,41 @@
+{
+  "id": "99ff6619-5d16-4278-bd8f-96e507aecf1d",
+  "title": "Reorder Northeast products",
+  "status": "APPROVED",
+  "summary": "Reorder three high-demand products using the seeded retail inventory fixture.",
+  "evidence": [
+    "Northeast demand forecast exceeds on-hand inventory for three products.",
+    "Inventory freshness was valid when the decision was generated."
+  ],
+  "dependencies": [
+    {
+      "asset_urn": "urn:li:dataset:(urn:li:dataPlatform:demo,fiction_retail.inventory,PROD)",
+      "dependency_type": "dataset",
+      "field_path": null
+    },
+    {
+      "asset_urn": "urn:li:dataset:(urn:li:dataPlatform:demo,fiction_retail.northeast_forecast,PROD)",
+      "dependency_type": "dataset",
+      "field_path": null
+    }
+  ],
+  "context": {
+    "source": "datahub_mcp_server",
+    "tools": [
+      "get_entities",
+      "list_schema_fields"
+    ],
+    "fetched_at": "2026-07-26T22:08:49.200408Z",
+    "facts": [
+      "DataHub MCP metadata identifies 3 governed Northeast reorder candidates.",
+      "Inventory freshness is FRESH; the approved demand forecast covers 30 days.",
+      "DataHub MCP returned 5 inventory fields and 5 forecast fields."
+    ],
+    "snapshot": {
+      "mode": "abbreviated-example"
+    }
+  },
+  "projection_status": "SYNCED",
+  "datahub_urn": "urn:li:document:decisiongraph-99ff6619-5d16-4278-bd8f-96e507aecf1d",
+  "projection_error": null
+}
