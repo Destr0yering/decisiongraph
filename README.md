@@ -94,6 +94,8 @@ The full local quickstart above is the authoritative live DataHub MCP path. It
 uses real governed entities and schemas and projects approved decisions back as
 DataHub Documents.
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Destr0yering/decisiongraph)
+
 To run the public-demo container locally:
 
 ```powershell

@@ -3,6 +3,7 @@ services:
     name: decisiongraph
     runtime: docker
     plan: free
+    autoDeployTrigger: "off"
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:

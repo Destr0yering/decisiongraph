@@ -132,7 +132,7 @@ HTML, CSS, and JavaScript.
 Replace these placeholders before submission:
 
 - Project/demo URL: `PROJECT_URL_REQUIRED`
-- Public Apache-2.0 repository: `REPOSITORY_URL_REQUIRED`
+- Public Apache-2.0 repository: https://github.com/Destr0yering/decisiongraph
 - Public YouTube, Vimeo, or Youku video: `VIDEO_URL_REQUIRED`
 
 ## Judge testing instructions
@@ -160,10 +160,10 @@ No paid service or private credential is required for the local quickstart.
 ## Final compliance checklist
 
 - [ ] Project URL is reachable without restriction through August 31, 2026.
-- [ ] Repository is public.
+- [x] Repository is public.
 - [x] Repository contains the full source, assets, examples, and setup instructions.
 - [x] Apache License 2.0 is stored in the root `LICENSE` file.
-- [ ] GitHub About section visibly identifies the Apache-2.0 license.
+- [x] GitHub identifies the root license as Apache-2.0.
 - [ ] Video is publicly visible on YouTube, Vimeo, or Youku.
 - [ ] Video is shorter than three minutes.
 - [ ] Video contains visible footage of the working application.
