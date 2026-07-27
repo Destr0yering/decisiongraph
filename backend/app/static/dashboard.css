@@ -221,6 +221,61 @@ button {
   grid-column: 1 / -1;
 }
 
+.panel-proof {
+  grid-column: 1 / -1;
+  border-color: rgba(139, 201, 216, 0.34);
+  background:
+    linear-gradient(135deg, rgba(139, 201, 216, 0.08), transparent 45%),
+    linear-gradient(180deg, rgba(27, 32, 49, 0.95), rgba(18, 21, 34, 0.98));
+}
+
+.proof-chip {
+  background: rgba(139, 201, 216, 0.16);
+  color: var(--cyan);
+}
+
+.proof-disclosure {
+  max-width: 82ch;
+  margin: -4px 0 16px;
+  color: #cad7dc;
+}
+
+.proof-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.proof-card,
+.proof-document,
+.proof-assets {
+  padding: 14px 16px;
+  border: 1px solid rgba(139, 201, 216, 0.16);
+  border-radius: 22px;
+  background: rgba(10, 11, 18, 0.28);
+}
+
+.proof-card strong,
+.proof-document strong {
+  display: block;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+
+.proof-document,
+.proof-assets {
+  margin-top: 12px;
+}
+
+.proof-document strong {
+  color: var(--cyan);
+}
+
+.proof-assets .dependency-list {
+  margin-top: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .panel-header {
   display: flex;
   align-items: start;
@@ -421,6 +476,10 @@ button {
     grid-template-columns: 1fr;
   }
 
+  .proof-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .status-cluster {
     min-width: 0;
   }
@@ -447,5 +506,10 @@ button {
   .status-cluster {
     width: 100%;
     grid-template-columns: 1fr 1fr;
+  }
+
+  .proof-grid,
+  .proof-assets .dependency-list {
+    grid-template-columns: 1fr;
   }
 }

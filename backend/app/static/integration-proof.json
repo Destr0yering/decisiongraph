@@ -1,0 +1,34 @@
+{
+  "verification_type": "recorded_live_integration_run",
+  "verified_at": "2026-07-26T22:08:49.200408Z",
+  "datahub_version": "1.6.0",
+  "context_source": "datahub_mcp_server",
+  "mcp_tools": [
+    "get_entities",
+    "list_schema_fields"
+  ],
+  "datasets": [
+    {
+      "urn": "urn:li:dataset:(urn:li:dataPlatform:demo,fiction_retail.inventory,PROD)",
+      "schema_field_count": 5
+    },
+    {
+      "urn": "urn:li:dataset:(urn:li:dataPlatform:demo,fiction_retail.northeast_forecast,PROD)",
+      "schema_field_count": 5
+    }
+  ],
+  "context_facts": [
+    "DataHub MCP metadata identified 3 governed Northeast reorder candidates.",
+    "Inventory freshness was FRESH and the approved demand forecast covered 30 days.",
+    "DataHub MCP returned 5 inventory fields and 5 forecast fields."
+  ],
+  "projection_status": "SYNCED",
+  "datahub_document_urn": "urn:li:document:decisiongraph-99ff6619-5d16-4278-bd8f-96e507aecf1d",
+  "related_assets": [
+    "urn:li:dataset:(urn:li:dataPlatform:demo,fiction_retail.inventory,PROD)",
+    "urn:li:dataset:(urn:li:dataPlatform:demo,fiction_retail.northeast_forecast,PROD)"
+  ],
+  "show_in_global_context": false,
+  "read_back_verified": true,
+  "disclosure": "Recorded verification snapshot from a local live DataHub 1.6 integration run. The GitHub Pages workflow above remains deterministic and browser-local."
+}

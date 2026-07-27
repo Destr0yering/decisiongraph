@@ -298,6 +298,21 @@ class DecisionWorkflowTests(unittest.TestCase):
         response = client.get("/")
         self.assertEqual(response.status_code, 200)
         self.assertIn("DecisionGraph Console", response.text)
+        self.assertIn("Verified DataHub Integration Snapshot", response.text)
+
+    def test_recorded_live_integration_snapshot_is_served(self) -> None:
+        client = TestClient(create_app(db_path=self.db_path))
+        response = client.get("/assets/integration-proof.json")
+        self.assertEqual(response.status_code, 200)
+        proof = response.json()
+        self.assertEqual(proof["context_source"], "datahub_mcp_server")
+        self.assertEqual(
+            proof["mcp_tools"], ["get_entities", "list_schema_fields"]
+        )
+        self.assertEqual(proof["projection_status"], "SYNCED")
+        self.assertTrue(proof["read_back_verified"])
+        self.assertEqual(len(proof["context_facts"]), 3)
+        self.assertEqual(len(proof["related_assets"]), 2)
 
 
 if __name__ == "__main__":

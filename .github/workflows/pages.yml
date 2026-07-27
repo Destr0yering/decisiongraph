@@ -29,6 +29,7 @@ jobs:
           cp backend/app/static/dashboard.css _site/assets/dashboard.css
           cp backend/app/static/dashboard.js _site/assets/dashboard.js
           cp backend/app/static/static-demo.js _site/assets/static-demo.js
+          cp backend/app/static/integration-proof.json _site/assets/integration-proof.json
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

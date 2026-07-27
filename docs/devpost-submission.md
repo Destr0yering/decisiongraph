@@ -141,19 +141,29 @@ Replace these placeholders before submission:
 
 1. Open the project URL.
 2. Select **Run Decision**.
-3. Inspect the recommendation, evidence, context source, and MCP tool provenance.
-4. Select **Approve** and confirm the record becomes `SYNCED`.
+3. Inspect the recommendation and evidence. Confirm that the public demo honestly
+   reports context source `deterministic_fixture` and MCP tools `None`.
+4. Select **Approve** and confirm the workflow becomes `APPROVED` while its
+   projection remains `NOT_CONFIGURED` because GitHub Pages has no DataHub
+   credentials.
 5. Select **Invalidate** and confirm the affected record becomes
    `REVALIDATION_REQUIRED`.
 6. Select **Revalidate** and inspect the new pending replacement with freshly
-   retrieved context.
+   generated fixture context.
 7. Open the audit view and confirm the original history and `supersedes`
    relationship remain visible.
+8. Scroll to **Verified DataHub Integration Snapshot**. This clearly labeled
+   recorded live-run evidence shows the separate DataHub 1.6 path: official MCP
+   tools, retrieved schema-field counts, `SYNCED` Document projection, Document
+   URN, two related dataset assets, and successful DataHub read-back.
 
 ### Local path
 
 Follow the repository README to start DataHub 1.6, seed the two sample datasets,
 enable the official DataHub MCP context provider, and launch DecisionGraph.
+In this mode, **Run Decision** reports context source `datahub_mcp_server` and
+tools `get_entities` plus `list_schema_fields`; after approval, projection
+becomes `SYNCED` and the record includes its native DataHub Document URN.
 
 No paid service or private credential is required for the local quickstart.
 

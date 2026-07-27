@@ -130,6 +130,57 @@
             </div>
             <div class="audit-list" id="auditList"></div>
           </section>
+
+          <section class="panel panel-proof" id="integrationProof">
+            <div class="panel-header">
+              <div>
+                <div class="panel-kicker">Integration evidence</div>
+                <h2>Verified DataHub Integration Snapshot</h2>
+              </div>
+              <div class="panel-chip proof-chip">Recorded live run</div>
+            </div>
+            <p class="proof-disclosure" id="proofDisclosure">
+              Loading the recorded verification snapshot…
+            </p>
+            <div class="proof-grid">
+              <article class="proof-card">
+                <span class="meta-label">DataHub</span>
+                <strong id="proofDataHubVersion">—</strong>
+              </article>
+              <article class="proof-card">
+                <span class="meta-label">Context source</span>
+                <strong id="proofContextSource">—</strong>
+              </article>
+              <article class="proof-card">
+                <span class="meta-label">Official MCP tools</span>
+                <strong id="proofTools">—</strong>
+              </article>
+              <article class="proof-card">
+                <span class="meta-label">Schema fields retrieved</span>
+                <strong id="proofSchemaFields">—</strong>
+              </article>
+              <article class="proof-card">
+                <span class="meta-label">Document projection</span>
+                <strong id="proofProjectionStatus">—</strong>
+              </article>
+              <article class="proof-card">
+                <span class="meta-label">DataHub read-back</span>
+                <strong id="proofReadBack">—</strong>
+              </article>
+            </div>
+            <div class="proof-document">
+              <span class="meta-label">Native DataHub Document URN</span>
+              <strong id="proofDocumentUrn">—</strong>
+            </div>
+            <div class="proof-assets">
+              <div class="detail-kicker">Persisted MCP context facts</div>
+              <ul class="evidence-list" id="proofContextFacts"></ul>
+            </div>
+            <div class="proof-assets">
+              <div class="detail-kicker">Related assets read back from DataHub</div>
+              <div class="dependency-list" id="proofRelatedAssets"></div>
+            </div>
+          </section>
         </section>
       </main>
     </div>

@@ -43,6 +43,16 @@ const elements = {
   approveButton: document.getElementById("approveButton"),
   revalidateButton: document.getElementById("revalidateButton"),
   syncButton: document.getElementById("syncButton"),
+  proofDisclosure: document.getElementById("proofDisclosure"),
+  proofDataHubVersion: document.getElementById("proofDataHubVersion"),
+  proofContextSource: document.getElementById("proofContextSource"),
+  proofTools: document.getElementById("proofTools"),
+  proofSchemaFields: document.getElementById("proofSchemaFields"),
+  proofProjectionStatus: document.getElementById("proofProjectionStatus"),
+  proofReadBack: document.getElementById("proofReadBack"),
+  proofDocumentUrn: document.getElementById("proofDocumentUrn"),
+  proofContextFacts: document.getElementById("proofContextFacts"),
+  proofRelatedAssets: document.getElementById("proofRelatedAssets"),
 };
 
 function statusPill(status) {
@@ -242,6 +252,46 @@ async function loadAppHealth() {
         : "Deterministic demo";
 }
 
+async function loadIntegrationProof() {
+  try {
+    const response = await fetch(apiUrl("assets/integration-proof.json"));
+    if (!response.ok) {
+      throw new Error(`Verification snapshot unavailable (${response.status})`);
+    }
+    const proof = await response.json();
+    const fieldTotal = proof.datasets.reduce(
+      (total, dataset) => total + dataset.schema_field_count,
+      0
+    );
+    elements.proofDisclosure.textContent = proof.disclosure;
+    elements.proofDataHubVersion.textContent = `v${proof.datahub_version}`;
+    elements.proofContextSource.textContent = proof.context_source;
+    elements.proofTools.textContent = proof.mcp_tools.join(" + ");
+    elements.proofSchemaFields.textContent =
+      `${fieldTotal} across ${proof.datasets.length} datasets`;
+    elements.proofProjectionStatus.textContent = proof.projection_status;
+    elements.proofReadBack.textContent = proof.read_back_verified
+      ? "VERIFIED"
+      : "NOT VERIFIED";
+    elements.proofDocumentUrn.textContent = proof.datahub_document_urn;
+    elements.proofContextFacts.innerHTML = proof.context_facts
+      .map((fact) => `<li>${escapeHtml(fact)}</li>`)
+      .join("");
+    elements.proofRelatedAssets.innerHTML = proof.related_assets
+      .map(
+        (assetUrn) => `
+          <div class="dependency-card">
+            <div class="dependency-type">Dataset relationship</div>
+            <div class="dependency-urn">${escapeHtml(assetUrn)}</div>
+          </div>
+        `
+      )
+      .join("");
+  } catch (error) {
+    elements.proofDisclosure.textContent = error.message;
+  }
+}
+
 async function act(label, action) {
   try {
     elements.datahubStatus.textContent = label;
@@ -306,6 +356,7 @@ async function boot() {
     refreshState(),
     loadDataHubHealth(),
     loadAppHealth(),
+    loadIntegrationProof(),
   ]);
 }
 

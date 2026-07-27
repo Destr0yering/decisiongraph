@@ -97,6 +97,13 @@ The full local quickstart above is the authoritative live DataHub MCP path. It
 uses real governed entities and schemas and projects approved decisions back as
 DataHub Documents.
 
+The public page also includes a clearly labeled **recorded live integration
+snapshot** from the verified local DataHub 1.6 run. It exposes the MCP context
+source and tools, retrieved field counts, native Document URN, `SYNCED`
+projection result, related dataset assets, and successful read-back. This
+evidence panel does not claim that the browser-local workflow is connected to
+DataHub.
+
 The repository also includes a root `Dockerfile` and `render.yaml` for anyone
 who prefers a container-hosted demo.
 
@@ -131,6 +138,6 @@ python -m unittest discover -s tests -v
 - [x] MCP-backed revalidation with persisted context snapshots
 - [x] Durable invalidation-event ledger
 - [x] Demo video and submission copy
-- [ ] Public repository and judge-accessible demo URL
+- [x] Public repository and judge-accessible demo URL
 
 See `docs/architecture.md` for the authoritative MVP boundaries.

@@ -2,7 +2,7 @@
   "id": "99ff6619-5d16-4278-bd8f-96e507aecf1d",
   "title": "Reorder Northeast products",
   "status": "APPROVED",
-  "summary": "Reorder three high-demand products using the seeded retail inventory fixture.",
+  "summary": "Reorder three high-demand products using governed inventory and forecast context retrieved through the official DataHub MCP Server.",
   "evidence": [
     "Northeast demand forecast exceeds on-hand inventory for three products.",
     "Inventory freshness was valid when the decision was generated."
