@@ -99,7 +99,7 @@ live DataHub 1.6 deployment rather than only mocked endpoints.
 - Ensured MCP failures cannot silently fall back to fixture evidence.
 - Added retry-safe handling so failed projections cannot remain stuck.
 - Verified the complete workflow through the browser and at a mobile viewport.
-- Passed all ten automated lifecycle and reliability tests.
+- Passed all eleven automated lifecycle and reliability tests.
 - Packaged the application with its dashboard assets and full setup instructions.
 
 ### What we learned
@@ -175,9 +175,9 @@ No paid service or private credential is required for the local quickstart.
 - [x] Apache License 2.0 is stored in the root `LICENSE` file.
 - [x] GitHub identifies the root license as Apache-2.0.
 - [ ] Video is publicly visible on YouTube, Vimeo, or Youku.
-- [ ] Video is shorter than three minutes.
-- [ ] Video contains visible footage of the working application.
-- [ ] Video contains no unlicensed music, franchise imagery, or unrelated marks.
+- [x] Video is shorter than three minutes.
+- [x] Video contains visible footage of the working application.
+- [x] Video contains no unlicensed music, franchise imagery, or unrelated marks.
 - [x] Submission description is in English.
 - [x] Sample inputs and decision output are present in `examples/`.
 - [x] DataHub MCP use and DataHub write-back are clearly described.

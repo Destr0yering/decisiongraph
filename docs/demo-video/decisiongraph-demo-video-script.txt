@@ -48,7 +48,7 @@ SLIDE 8 — CLOSE
 The result is a closed loop for accountable AI decisions: governed context
 enters, a reviewable recommendation is created, human approval controls
 projection, and later changes trigger traceable revalidation. The prototype
-passed all ten automated checks, live MCP retrieval, real DataHub projection
+passed all eleven automated checks, live MCP retrieval, real DataHub projection
 readback, browser workflow, and mobile layout verification.
 
 DecisionGraph: run, review, trace, and revalidate.
