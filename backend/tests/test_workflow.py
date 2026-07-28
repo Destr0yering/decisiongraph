@@ -1,3 +1,4 @@
+import asyncio
 import os
 from pathlib import Path
 import tempfile
@@ -6,9 +7,18 @@ import unittest
 from fastapi.testclient import TestClient
 
 from app.datahub_adapter import DataHubUnavailable
+from app.analytics_agent import (
+    AnalyticsAgentClient,
+    AnalyticsAgentConfig,
+    AnalyticsUnavailable,
+)
 from app.main import create_app
 from app.mcp_context import ContextUnavailable
-from app.models import DecisionContext
+from app.models import (
+    AgentRegistration,
+    DecisionContext,
+    ReorderAnalysis,
+)
 
 
 class SuccessfulAdapter:
@@ -19,7 +29,13 @@ class SuccessfulAdapter:
         return True
 
     def create_decision_document(
-        self, *, decision_id: str, title: str, summary: str, related_assets: list[str]
+        self,
+        *,
+        decision_id: str,
+        title: str,
+        summary: str,
+        related_assets: list[str],
+        existing_urn: str | None = None,
     ) -> str:
         assert title
         assert "## Evidence" in summary
@@ -31,7 +47,13 @@ class FlakyAdapter(SuccessfulAdapter):
     attempts = 0
 
     def create_decision_document(
-        self, *, decision_id: str, title: str, summary: str, related_assets: list[str]
+        self,
+        *,
+        decision_id: str,
+        title: str,
+        summary: str,
+        related_assets: list[str],
+        existing_urn: str | None = None,
     ) -> str:
         type(self).attempts += 1
         if type(self).attempts == 1:
@@ -41,6 +63,7 @@ class FlakyAdapter(SuccessfulAdapter):
             title=title,
             summary=summary,
             related_assets=related_assets,
+            existing_urn=existing_urn,
         )
 
 
@@ -75,6 +98,63 @@ class FailingContextProvider:
         raise ContextUnavailable("MCP context unavailable")
 
 
+class AnalyticsProvider:
+    calls = 0
+
+    async def analyze_reorder(
+        self, _context: DecisionContext
+    ) -> ReorderAnalysis:
+        type(self).calls += 1
+        count = type(self).calls + 2
+        rows = [
+            {
+                "sku": f"NE-{index}",
+                "recommended_reorder_quantity": index + 10,
+            }
+            for index in range(count)
+        ]
+        return ReorderAnalysis(
+            source="datahub_analytics_agent",
+            question="Which Northeast products need reorder?",
+            conversation_id=f"conversation-{type(self).calls}",
+            engine_name="fiction-retail",
+            answer=f"{count} governed products require reorder.",
+            sql="SELECT * FROM governed_reorder_candidates",
+            columns=["sku", "recommended_reorder_quantity"],
+            rows=rows,
+            chart={"mark": "bar"},
+            context_quality={"score": 5, "label": "Excellent"},
+            tool_calls=["search", "get_entities", "execute_sql"],
+        )
+
+
+class FailingAnalyticsProvider:
+    async def analyze_reorder(
+        self, _context: DecisionContext
+    ) -> ReorderAnalysis:
+        raise AnalyticsUnavailable("Analytics Agent unavailable")
+
+
+class SuccessfulRegistrar:
+    def __init__(self, _config):
+        pass
+
+    def register(
+        self, consumed_dataset_urns: list[str]
+    ) -> AgentRegistration:
+        return AgentRegistration(
+            agent_urn="urn:li:aiAgent:decisiongraph",
+            skill_urn=(
+                "urn:li:agentSkill:evidence-bound-decision-governance"
+            ),
+            tool_urns=[
+                "urn:li:api:decisiongraph.propose-decision",
+                "urn:li:api:decisiongraph.approve-decision",
+            ],
+            consumed_dataset_urns=consumed_dataset_urns,
+        )
+
+
 class DecisionWorkflowTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -83,6 +163,14 @@ class DecisionWorkflowTests(unittest.TestCase):
         self.previous_mcp_enabled = os.environ.pop(
             "DATAHUB_MCP_ENABLED", None
         )
+        self.analytics_environment = {
+            key: os.environ.pop(key, None)
+            for key in (
+                "ANALYTICS_AGENT_ENABLED",
+                "ANALYTICS_AGENT_URL",
+                "ANALYTICS_AGENT_ENGINE",
+            )
+        }
 
     def tearDown(self) -> None:
         if self.previous_url is not None:
@@ -93,6 +181,11 @@ class DecisionWorkflowTests(unittest.TestCase):
             os.environ["DATAHUB_MCP_ENABLED"] = self.previous_mcp_enabled
         else:
             os.environ.pop("DATAHUB_MCP_ENABLED", None)
+        for key, value in self.analytics_environment.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
         self.temp_dir.cleanup()
 
     def test_offline_revalidation_creates_replacement_and_supersedes_original(self) -> None:
@@ -312,6 +405,139 @@ class DecisionWorkflowTests(unittest.TestCase):
         response = client.post("/api/v1/decisions/run")
         self.assertEqual(response.status_code, 503)
         self.assertEqual(client.get("/api/v1/decisions").json(), [])
+
+    def test_analytics_agent_output_is_persisted_and_recomputed(self) -> None:
+        AnalyticsProvider.calls = 0
+        client = TestClient(
+            create_app(
+                db_path=self.db_path,
+                context_provider_factory=MCPContextProvider,
+                analysis_provider_factory=AnalyticsProvider,
+            )
+        )
+        created = client.post("/api/v1/decisions/run").json()
+        self.assertEqual(
+            created["analysis"]["source"], "datahub_analytics_agent"
+        )
+        self.assertEqual(
+            created["analysis"]["conversation_id"], "conversation-1"
+        )
+        self.assertEqual(len(created["analysis"]["rows"]), 3)
+        self.assertIn("SELECT", created["analysis"]["sql"])
+
+        client.post(f"/api/v1/decisions/{created['id']}/approve")
+        client.post(
+            "/api/v1/events/invalidation",
+            json={"asset_urn": created["dependencies"][0]["asset_urn"]},
+        )
+        replacement = client.post(
+            f"/api/v1/decisions/{created['id']}/revalidate"
+        ).json()
+        self.assertEqual(
+            replacement["analysis"]["conversation_id"], "conversation-2"
+        )
+        self.assertEqual(len(replacement["analysis"]["rows"]), 4)
+
+        comparison = client.get(
+            f"/api/v1/decisions/{replacement['id']}/comparison"
+        ).json()
+        paths = {change["path"] for change in comparison["changes"]}
+        self.assertIn("analysis.rows", paths)
+        routines = {
+            impact["routine"] for impact in comparison["routine_impacts"]
+        }
+        self.assertIn("run_analytics_agent", routines)
+
+    def test_configured_analytics_failure_does_not_create_decision(self) -> None:
+        client = TestClient(
+            create_app(
+                db_path=self.db_path,
+                analysis_provider_factory=FailingAnalyticsProvider,
+            )
+        )
+        response = client.post("/api/v1/decisions/run")
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(client.get("/api/v1/decisions").json(), [])
+
+    def test_agent_registry_registration_exposes_skill_tools_and_lineage(
+        self,
+    ) -> None:
+        os.environ["DATAHUB_GMS_URL"] = "http://datahub.test"
+        client = TestClient(
+            create_app(
+                db_path=self.db_path,
+                registrar_factory=SuccessfulRegistrar,
+            )
+        )
+        registration = client.post("/api/v1/datahub/agent-registry")
+        self.assertEqual(registration.status_code, 200)
+        payload = registration.json()
+        self.assertEqual(
+            payload["agent_urn"], "urn:li:aiAgent:decisiongraph"
+        )
+        self.assertEqual(len(payload["consumed_dataset_urns"]), 2)
+        self.assertEqual(len(payload["tool_urns"]), 2)
+
+        status = client.get("/api/v1/datahub/agent-registry").json()
+        self.assertEqual(status["status"], "registered")
+        self.assertEqual(status["skill_urn"], payload["skill_urn"])
+
+    def test_analytics_agent_sse_contract_is_preserved(self) -> None:
+        class StubAnalyticsAgentClient(AnalyticsAgentClient):
+            def _request(
+                self,
+                method: str,
+                path: str,
+                body: dict[str, object] | None = None,
+                *,
+                accept: str = "application/json",
+            ) -> tuple[str, str]:
+                if path == "/api/conversations":
+                    self.assert_request(method, body)
+                    return '{"id":"conversation-42"}', "application/json"
+                if path.endswith("/messages"):
+                    self_test.assertEqual(accept, "text/event-stream")
+                    return (
+                        'data: {"event":"TOOL_CALL","payload":{"tool_name":"run_sql"}}\n'
+                        'data: {"event":"SQL","payload":{"sql":"SELECT sku, reorder_quantity FROM governed_reorders","columns":["sku","reorder_quantity"],"rows":[{"sku":"NE-104","reorder_quantity":25}]}}\n'
+                        'data: {"event":"CHART","payload":{"vega_lite_spec":{"mark":"bar"}}}\n'
+                        'data: {"event":"COMPLETE","payload":{"text":"Reorder 25 units."}}\n',
+                        "text/event-stream",
+                    )
+                if path.endswith("/quality"):
+                    return '{"score":5,"label":"Excellent"}', "application/json"
+                raise AssertionError(path)
+
+            def assert_request(
+                self,
+                method: str,
+                body: dict[str, object] | None,
+            ) -> None:
+                self_test.assertEqual(method, "POST")
+                self_test.assertEqual(body["engine_name"], "warehouse")
+
+        self_test = self
+        client = StubAnalyticsAgentClient(
+            AnalyticsAgentConfig(
+                base_url="http://analytics-agent.test",
+                engine_name="warehouse",
+            )
+        )
+        analysis = asyncio.run(
+            client.analyze_reorder(
+                DecisionContext(
+                    source="datahub_mcp_server",
+                    facts=["Two governed datasets retrieved."],
+                )
+            )
+        )
+        self.assertEqual(analysis.source, "datahub_analytics_agent")
+        self.assertEqual(analysis.conversation_id, "conversation-42")
+        self.assertEqual(analysis.sql, "SELECT sku, reorder_quantity FROM governed_reorders")
+        self.assertEqual(analysis.rows[0]["reorder_quantity"], 25)
+        self.assertEqual(analysis.chart, {"mark": "bar"})
+        self.assertEqual(analysis.context_quality["score"], 5)
+        self.assertEqual(analysis.tool_calls, ["run_sql"])
 
     def test_revalidate_conflicts_until_decision_is_invalidated(self) -> None:
         client = TestClient(create_app(db_path=self.db_path))

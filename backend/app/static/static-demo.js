@@ -98,6 +98,61 @@
           forecast_fields: isRevision ? 6 : 5,
         },
       },
+      analysis: {
+        source: "deterministic_fixture",
+        question: "Which governed Northeast products need reorder?",
+        conversation_id: null,
+        engine_name: null,
+        answer: isRevision
+          ? "Four governed Northeast products require reorder under the refreshed planning horizon."
+          : "Three governed Northeast products require reorder under the current planning horizon.",
+        sql:
+          "SELECT i.product_id, i.on_hand_units, f.forecast_units,\n" +
+          "       f.forecast_units - i.on_hand_units AS recommended_reorder_quantity\n" +
+          "FROM fiction_retail.inventory i\n" +
+          "JOIN fiction_retail.northeast_forecast f\n" +
+          "  ON f.product_id = i.product_id AND f.region = i.region\n" +
+          "WHERE i.region = 'Northeast' AND f.forecast_units > i.on_hand_units",
+        columns: [
+          "product_id",
+          "on_hand_units",
+          "forecast_units",
+          "recommended_reorder_quantity",
+        ],
+        rows: [
+          {
+            product_id: "SKU-DG-101",
+            on_hand_units: 60,
+            forecast_units: 140,
+            recommended_reorder_quantity: 80,
+          },
+          {
+            product_id: "SKU-DG-102",
+            on_hand_units: 45,
+            forecast_units: 115,
+            recommended_reorder_quantity: 70,
+          },
+          {
+            product_id: "SKU-DG-103",
+            on_hand_units: 30,
+            forecast_units: 92,
+            recommended_reorder_quantity: 62,
+          },
+          ...(isRevision
+            ? [
+                {
+                  product_id: "SKU-DG-104",
+                  on_hand_units: 25,
+                  forecast_units: 70,
+                  recommended_reorder_quantity: 45,
+                },
+              ]
+            : []),
+        ],
+        chart: { mark: "bar" },
+        context_quality: { score: 3, label: "Fixture" },
+        tool_calls: [],
+      },
     };
   }
 
@@ -151,9 +206,20 @@
         });
       }
     }
+    if (JSON.stringify(prior.analysis?.rows) !== JSON.stringify(current.analysis?.rows)) {
+      changes.push({
+        path: "analysis.rows",
+        change_type: "CHANGED",
+        before: prior.analysis?.rows,
+        after: current.analysis?.rows,
+      });
+    }
     const contextPaths = changes
       .map((change) => change.path)
       .filter((path) => path.startsWith("context"));
+    const analysisPaths = changes
+      .map((change) => change.path)
+      .filter((path) => path.startsWith("analysis"));
     return {
       prior,
       current,
@@ -165,9 +231,14 @@
           triggered_by: contextPaths,
         },
         {
+          routine: "run_analytics_agent",
+          effect: "Re-run governed SQL and replace the prior result rows and chart.",
+          triggered_by: analysisPaths,
+        },
+        {
           routine: "build_recommendation",
-          effect: "Recompute the recommendation and evidence from the updated context; do not replay the prior conclusion.",
-          triggered_by: contextPaths,
+          effect: "Recompute the recommendation from updated DataHub context and analytics results.",
+          triggered_by: [...contextPaths, ...analysisPaths],
         },
         {
           routine: "request_human_approval",
@@ -206,6 +277,14 @@
     }
     if (method === "GET" && path === "/api/v1/datahub/health") {
       return { status: "not_configured" };
+    }
+    if (method === "GET" && path === "/api/v1/datahub/agent-registry") {
+      return { status: "not_registered" };
+    }
+    if (method === "POST" && path === "/api/v1/datahub/agent-registry") {
+      throw new Error(
+        "Static judge demo has no DataHub credentials; use the local live path."
+      );
     }
     if (method === "GET" && path === "/api/v1/decisions") {
       return [...store.decisions].reverse();

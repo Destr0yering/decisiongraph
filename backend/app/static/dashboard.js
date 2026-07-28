@@ -68,6 +68,18 @@ const elements = {
   currentRevisionFacts: document.getElementById("currentRevisionFacts"),
   changeList: document.getElementById("changeList"),
   routineImpactList: document.getElementById("routineImpactList"),
+  analysisSource: document.getElementById("analysisSource"),
+  analysisQuality: document.getElementById("analysisQuality"),
+  analysisConversation: document.getElementById("analysisConversation"),
+  analysisRows: document.getElementById("analysisRows"),
+  analysisAnswer: document.getElementById("analysisAnswer"),
+  analysisSql: document.getElementById("analysisSql"),
+  agentRegistryStatus: document.getElementById("agentRegistryStatus"),
+  agentRegistryDetail: document.getElementById("agentRegistryDetail"),
+  agentRegistryUrn: document.getElementById("agentRegistryUrn"),
+  agentSkillUrn: document.getElementById("agentSkillUrn"),
+  agentToolCount: document.getElementById("agentToolCount"),
+  registerAgentButton: document.getElementById("registerAgentButton"),
 };
 
 function statusPill(status) {
@@ -302,6 +314,12 @@ function renderDecisionDetail() {
     elements.dependencyList.innerHTML =
       '<div class="empty-state">Dependency trace appears here.</div>';
     elements.evidenceList.innerHTML = "";
+    elements.analysisSource.textContent = "Not run";
+    elements.analysisQuality.textContent = "Not assessed";
+    elements.analysisConversation.textContent = "None";
+    elements.analysisRows.textContent = "0";
+    elements.analysisAnswer.textContent = "No analytics result is attached.";
+    elements.analysisSql.textContent = "-- SQL appears here";
     void renderAudit(null);
     void renderComparison(null);
     return;
@@ -336,6 +354,18 @@ function renderDecisionDetail() {
   elements.evidenceList.innerHTML = decision.evidence
     .map((fact) => `<li>${escapeHtml(fact)}</li>`)
     .join("");
+  const analysis = decision.analysis;
+  elements.analysisSource.textContent =
+    analysis?.source?.replaceAll("_", " ") || "Not run";
+  elements.analysisQuality.textContent =
+    analysis?.context_quality?.label || "Not assessed";
+  elements.analysisConversation.textContent =
+    analysis?.conversation_id || "Fixture";
+  elements.analysisRows.textContent = String(analysis?.rows?.length || 0);
+  elements.analysisAnswer.textContent =
+    analysis?.answer || "No analytics result is attached.";
+  elements.analysisSql.textContent =
+    analysis?.sql || "-- SQL was not recorded";
   void renderAudit(decision);
   void renderComparison(decision);
 }
@@ -372,6 +402,35 @@ async function loadAppHealth() {
       : payload.mode === "static-demo"
         ? "Static judge demo"
         : "Deterministic demo";
+}
+
+function renderAgentRegistry(payload) {
+  const registered =
+    payload.status === "registered" || Boolean(payload.agent_urn);
+  elements.agentRegistryStatus.textContent = registered
+    ? "Registered"
+    : payload.status === "sdk_unavailable"
+      ? "SDK unavailable"
+      : "Not registered";
+  elements.agentRegistryDetail.textContent =
+    payload.detail ||
+    (registered
+      ? "DecisionGraph, its governance skill, tools, and consumed datasets are cataloged in DataHub."
+      : "Ready to register DecisionGraph when DataHub is connected.");
+  elements.agentRegistryUrn.textContent = payload.agent_urn || "—";
+  elements.agentSkillUrn.textContent = payload.skill_urn || "—";
+  elements.agentToolCount.textContent = String(payload.tool_urns?.length || 0);
+  elements.registerAgentButton.disabled =
+    payload.status === "sdk_unavailable" || registered;
+}
+
+async function loadAgentRegistry() {
+  try {
+    const payload = await fetchJson(apiUrl("api/v1/datahub/agent-registry"));
+    renderAgentRegistry(payload);
+  } catch (error) {
+    elements.agentRegistryStatus.textContent = error.message;
+  }
 }
 
 async function loadIntegrationProof() {
@@ -473,12 +532,23 @@ elements.invalidateButton.addEventListener("click", () => {
   );
 });
 
+elements.registerAgentButton.addEventListener("click", () =>
+  act("Registering DecisionGraph in DataHub", async () => {
+    const payload = await fetchJson(apiUrl("api/v1/datahub/agent-registry"), {
+      method: "POST",
+    });
+    renderAgentRegistry(payload);
+    return selectedDecision();
+  })
+);
+
 async function boot() {
   await Promise.all([
     refreshState(),
     loadDataHubHealth(),
     loadAppHealth(),
     loadIntegrationProof(),
+    loadAgentRegistry(),
   ]);
 }
 

@@ -147,6 +147,11 @@ def _context_entity_snapshot(entity: dict[str, object]) -> dict[str, object]:
         "name": entity.get("name"),
         "description": description,
         "custom_properties": _custom_properties(entity),
+        "ownership": entity.get("ownership", {}),
+        "tags": entity.get("tags", []),
+        "glossary_terms": entity.get("glossaryTerms", []),
+        "domain": entity.get("domain"),
+        "structured_properties": entity.get("structuredProperties", []),
         "health": entity.get("health", []),
     }
 
@@ -159,6 +164,28 @@ def _context_schema_snapshot(schema: object) -> object:
         for key in ("urn", "fields", "totalFields", "returned")
         if key in schema
     }
+
+
+def _lineage_count(lineage: object) -> int:
+    if isinstance(lineage, list):
+        return len(lineage)
+    if isinstance(lineage, dict):
+        for key in (
+            "searchResults",
+            "entities",
+            "relationships",
+            "results",
+            "nodes",
+        ):
+            value = lineage.get(key)
+            if isinstance(value, list):
+                return len(value)
+        return sum(
+            _lineage_count(lineage.get(direction))
+            for direction in ("upstreams", "downstreams")
+            if direction in lineage
+        )
+    return 0
 
 
 class DataHubMCPContextProvider:
@@ -214,6 +241,24 @@ class DataHubMCPContextProvider:
                     "list_schema_fields",
                     {"urn": FORECAST_URN, "limit": 100},
                 )
+                inventory_lineage_result = await client.call_tool(
+                    "get_lineage",
+                    {
+                        "urn": INVENTORY_URN,
+                        "upstream": False,
+                        "max_hops": 2,
+                        "max_results": 100,
+                    },
+                )
+                forecast_lineage_result = await client.call_tool(
+                    "get_lineage",
+                    {
+                        "urn": FORECAST_URN,
+                        "upstream": False,
+                        "max_hops": 2,
+                        "max_results": 100,
+                    },
+                )
         except Exception as error:
             raise ContextUnavailable(
                 f"Cannot retrieve context through DataHub MCP: {error}"
@@ -229,6 +274,12 @@ class DataHubMCPContextProvider:
         )
         forecast_schema = _tool_data(
             forecast_schema_result, "list_schema_fields"
+        )
+        inventory_lineage = _tool_data(
+            inventory_lineage_result, "get_lineage"
+        )
+        forecast_lineage = _tool_data(
+            forecast_lineage_result, "get_lineage"
         )
         inventory_fields = _schema_count(inventory_schema)
         forecast_fields = _schema_count(forecast_schema)
@@ -253,6 +304,7 @@ class DataHubMCPContextProvider:
             tools=[
                 "get_entities",
                 "list_schema_fields",
+                "get_lineage",
             ],
             facts=[
                 (
@@ -268,6 +320,12 @@ class DataHubMCPContextProvider:
                     f"{inventory_fields} inventory fields and "
                     f"{forecast_fields} forecast fields."
                 ),
+                (
+                    "DataHub MCP traced "
+                    f"{_lineage_count(inventory_lineage)} inventory and "
+                    f"{_lineage_count(forecast_lineage)} forecast downstream "
+                    "lineage relationships."
+                ),
             ],
             snapshot={
                 "entities": [
@@ -277,6 +335,10 @@ class DataHubMCPContextProvider:
                 "schemas": {
                     INVENTORY_URN: _context_schema_snapshot(inventory_schema),
                     FORECAST_URN: _context_schema_snapshot(forecast_schema),
+                },
+                "lineage": {
+                    INVENTORY_URN: inventory_lineage,
+                    FORECAST_URN: forecast_lineage,
                 },
             },
         )

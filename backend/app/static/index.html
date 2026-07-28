@@ -117,6 +117,30 @@
                 <div class="detail-kicker">Evidence</div>
                 <ul class="evidence-list" id="evidenceList"></ul>
               </article>
+
+              <article class="detail-card analytics-card">
+                <div class="detail-kicker">DataHub Analytics Agent</div>
+                <div class="meta-grid">
+                  <div>
+                    <span class="meta-label">Source</span>
+                    <strong id="analysisSource">Not run</strong>
+                  </div>
+                  <div>
+                    <span class="meta-label">Context quality</span>
+                    <strong id="analysisQuality">Not assessed</strong>
+                  </div>
+                  <div>
+                    <span class="meta-label">Conversation</span>
+                    <strong id="analysisConversation">None</strong>
+                  </div>
+                  <div>
+                    <span class="meta-label">Result rows</span>
+                    <strong id="analysisRows">0</strong>
+                  </div>
+                </div>
+                <p id="analysisAnswer">No analytics result is attached.</p>
+                <pre class="analysis-sql" id="analysisSql">-- SQL appears here</pre>
+              </article>
             </div>
           </section>
 
@@ -180,6 +204,40 @@
               <div class="panel-chip" id="auditCount">0 events</div>
             </div>
             <div class="audit-list" id="auditList"></div>
+          </section>
+
+          <section class="panel panel-registry">
+            <div class="panel-header">
+              <div>
+                <div class="panel-kicker">DataHub Agent Context Kit</div>
+                <h2>Agent Registry</h2>
+              </div>
+              <div class="panel-chip" id="agentRegistryStatus">Not registered</div>
+            </div>
+            <p class="proof-disclosure" id="agentRegistryDetail">
+              Register DecisionGraph, its evidence-bound governance skill, its
+              callable tools, and the datasets it consumes as native DataHub
+              Agent Registry entities.
+            </p>
+            <div class="action-row">
+              <button class="lcars-button accent" id="registerAgentButton">
+                Register in DataHub
+              </button>
+            </div>
+            <div class="proof-grid">
+              <article class="proof-card">
+                <span class="meta-label">Agent URN</span>
+                <strong id="agentRegistryUrn">—</strong>
+              </article>
+              <article class="proof-card">
+                <span class="meta-label">Skill URN</span>
+                <strong id="agentSkillUrn">—</strong>
+              </article>
+              <article class="proof-card">
+                <span class="meta-label">Registered tools</span>
+                <strong id="agentToolCount">0</strong>
+              </article>
+            </div>
           </section>
 
           <section class="panel panel-proof" id="integrationProof">

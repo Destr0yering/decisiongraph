@@ -16,6 +16,7 @@ from .models import (
     DecisionStatus,
     InvalidationRecord,
     ProjectionStatus,
+    ReorderAnalysis,
 )
 
 
@@ -47,6 +48,7 @@ class DecisionStore:
                     evidence_json TEXT NOT NULL,
                     dependencies_json TEXT NOT NULL,
                     context_json TEXT,
+                    analysis_json TEXT,
                     created_at TEXT NOT NULL,
                     approved_at TEXT,
                     supersedes TEXT,
@@ -85,6 +87,10 @@ class DecisionStore:
                 connection.execute(
                     "ALTER TABLE decisions ADD COLUMN context_json TEXT"
                 )
+            if "analysis_json" not in columns:
+                connection.execute(
+                    "ALTER TABLE decisions ADD COLUMN analysis_json TEXT"
+                )
 
     @staticmethod
     def _decision_from_row(row: sqlite3.Row) -> Decision:
@@ -98,6 +104,11 @@ class DecisionStore:
             context=(
                 DecisionContext.model_validate_json(row["context_json"])
                 if row["context_json"]
+                else None
+            ),
+            analysis=(
+                ReorderAnalysis.model_validate_json(row["analysis_json"])
+                if row["analysis_json"]
                 else None
             ),
             created_at=row["created_at"],
@@ -134,10 +145,10 @@ class DecisionStore:
                 """
                 INSERT INTO decisions(
                     id, title, status, summary, evidence_json, dependencies_json,
-                    context_json,
+                    context_json, analysis_json,
                     created_at, approved_at, supersedes, datahub_urn,
                     projection_status, projection_error
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(decision.id),
@@ -149,6 +160,11 @@ class DecisionStore:
                     (
                         decision.context.model_dump_json()
                         if decision.context
+                        else None
+                    ),
+                    (
+                        decision.analysis.model_dump_json()
+                        if decision.analysis
                         else None
                     ),
                     decision.created_at.isoformat(),
@@ -271,6 +287,7 @@ class DecisionStore:
                 ],
                 dependencies=prior.dependencies,
                 context=prior.context,
+                analysis=prior.analysis,
                 supersedes=prior.id,
             )
             if replacement.supersedes != prior.id:
@@ -279,10 +296,10 @@ class DecisionStore:
                 """
                 INSERT INTO decisions(
                     id, title, status, summary, evidence_json, dependencies_json,
-                    context_json,
+                    context_json, analysis_json,
                     created_at, approved_at, supersedes, datahub_urn,
                     projection_status, projection_error
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(replacement.id),
@@ -296,6 +313,11 @@ class DecisionStore:
                     (
                         replacement.context.model_dump_json()
                         if replacement.context
+                        else None
+                    ),
+                    (
+                        replacement.analysis.model_dump_json()
+                        if replacement.analysis
                         else None
                     ),
                     replacement.created_at.isoformat(),

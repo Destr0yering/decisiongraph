@@ -1,4 +1,7 @@
 {
+  "record_kind": "recorded_live_datahub_1_6_run",
+  "implementation_version": "0.2.0",
+  "disclosure": "This is the earlier verified MCP read and DataHub Document write-back run. It predates the Analytics Agent and get_lineage additions; see analytics-agent-contract.json for the current analysis payload shape.",
   "id": "99ff6619-5d16-4278-bd8f-96e507aecf1d",
   "title": "Reorder Northeast products",
   "status": "APPROVED",
