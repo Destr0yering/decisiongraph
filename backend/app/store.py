@@ -176,6 +176,14 @@ class DecisionStore:
             ).fetchall()
         return [self._decision_from_row(row) for row in rows]
 
+    def replacement_for(self, decision_id: UUID | str) -> Decision | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM decisions WHERE supersedes = ?",
+                (str(decision_id),),
+            ).fetchone()
+        return self._decision_from_row(row) if row else None
+
     def approve(self, decision_id: UUID) -> Decision | None:
         approved_at = datetime.now(timezone.utc).isoformat()
         with self._connect() as connection:

@@ -60,3 +60,23 @@ class InvalidationRecord(InvalidationEvent):
     id: UUID = Field(default_factory=uuid4)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     impacted_decision_ids: list[UUID] = Field(default_factory=list)
+
+
+class FieldChange(BaseModel):
+    path: str
+    change_type: str
+    before: object | None = None
+    after: object | None = None
+
+
+class RoutineImpact(BaseModel):
+    routine: str
+    effect: str
+    triggered_by: list[str] = Field(default_factory=list)
+
+
+class DecisionComparison(BaseModel):
+    prior: Decision
+    current: Decision
+    changes: list[FieldChange] = Field(default_factory=list)
+    routine_impacts: list[RoutineImpact] = Field(default_factory=list)

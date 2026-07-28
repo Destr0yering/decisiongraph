@@ -38,6 +38,7 @@ GET  /api/v1/events/invalidation
 GET  /api/v1/decisions
 GET  /api/v1/decisions/{decision_id}
 GET  /api/v1/decisions/{decision_id}/audit
+GET  /api/v1/decisions/{decision_id}/comparison
 GET  /api/v1/datahub/health
 GET  /health
 ```
@@ -68,6 +69,12 @@ python -m uvicorn app.main:app --reload
 Then open [http://localhost:8000](http://localhost:8000) to use the DecisionGraph
 console. From the UI you can run a decision, approve it, trigger invalidation,
 create a revalidation revision, and inspect the audit trail.
+
+Every revision pair also exposes a change-impact comparison. The dashboard keeps
+the prior and updated context side by side, highlights changed facts and snapshot
+paths, provides direct navigation to either immutable record, and explains which
+downstream routines must retrieve context, rebuild the recommendation, request
+approval, monitor dependencies, or project a new DataHub Document.
 
 The first MCP-backed run may take longer while `uv` prepares the isolated
 official `mcp-server-datahub` environment. Mutation tools are disabled for this

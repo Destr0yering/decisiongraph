@@ -256,6 +256,52 @@ class DecisionWorkflowTests(unittest.TestCase):
         self.assertEqual(replacement["context"]["snapshot"]["retrieval"], 2)
         self.assertIn("freshly retrieved", replacement["summary"])
 
+    def test_revision_comparison_exposes_changes_and_routine_impacts(self) -> None:
+        MCPContextProvider.calls = 0
+        client = TestClient(
+            create_app(
+                db_path=self.db_path,
+                context_provider_factory=MCPContextProvider,
+            )
+        )
+        prior = client.post("/api/v1/decisions/run").json()
+        client.post(f"/api/v1/decisions/{prior['id']}/approve")
+        client.post(
+            "/api/v1/events/invalidation",
+            json={"asset_urn": prior["dependencies"][0]["asset_urn"]},
+        )
+        current = client.post(
+            f"/api/v1/decisions/{prior['id']}/revalidate"
+        ).json()
+
+        comparison = client.get(
+            f"/api/v1/decisions/{current['id']}/comparison"
+        )
+        self.assertEqual(comparison.status_code, 200)
+        payload = comparison.json()
+        self.assertEqual(payload["prior"]["id"], prior["id"])
+        self.assertEqual(payload["current"]["id"], current["id"])
+        changed_paths = {change["path"] for change in payload["changes"]}
+        self.assertIn("context.facts", changed_paths)
+        self.assertIn("context.snapshot.retrieval", changed_paths)
+        routines = {
+            impact["routine"] for impact in payload["routine_impacts"]
+        }
+        self.assertEqual(
+            routines,
+            {
+                "retrieve_context",
+                "build_recommendation",
+                "request_human_approval",
+                "project_datahub_document",
+            },
+        )
+
+        comparison_from_prior = client.get(
+            f"/api/v1/decisions/{prior['id']}/comparison"
+        ).json()
+        self.assertEqual(comparison_from_prior["current"]["id"], current["id"])
+
     def test_configured_context_failure_does_not_fall_back_to_fixture(self) -> None:
         client = TestClient(
             create_app(
@@ -299,6 +345,7 @@ class DecisionWorkflowTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("DecisionGraph Console", response.text)
         self.assertIn("Verified DataHub Integration Snapshot", response.text)
+        self.assertIn("Prior Data → Updated Data → Routine Impact", response.text)
 
     def test_recorded_live_integration_snapshot_is_served(self) -> None:
         client = TestClient(create_app(db_path=self.db_path))

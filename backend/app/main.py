@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
+from .comparison import compare_decisions
 from .datahub_adapter import DataHubAdapter, DataHubConfig, DataHubUnavailable
 from .mcp_context import (
     ContextProvider,
@@ -16,6 +17,7 @@ from .mcp_context import (
 )
 from .models import (
     Decision,
+    DecisionComparison,
     DecisionStatus,
     InvalidationEvent,
     InvalidationRecord,
@@ -121,6 +123,27 @@ def create_app(
         if not store.get(decision_id):
             raise HTTPException(status_code=404, detail="Decision not found")
         return store.audit_events(decision_id)
+
+    @api.get(
+        "/api/v1/decisions/{decision_id}/comparison",
+        response_model=DecisionComparison,
+    )
+    def get_comparison(decision_id: UUID) -> DecisionComparison:
+        selected = store.get(decision_id)
+        if not selected:
+            raise HTTPException(status_code=404, detail="Decision not found")
+        if selected.supersedes:
+            prior = store.get(selected.supersedes)
+            current = selected
+        else:
+            prior = selected
+            current = store.replacement_for(selected.id)
+        if not prior or not current:
+            raise HTTPException(
+                status_code=404,
+                detail="No prior and updated revision pair exists",
+            )
+        return compare_decisions(prior, current)
 
     @api.post("/api/v1/decisions/run", status_code=201)
     async def run_reorder_decision() -> Decision:

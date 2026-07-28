@@ -120,6 +120,57 @@
             </div>
           </section>
 
+          <section class="panel panel-change">
+            <div class="panel-header">
+              <div>
+                <div class="panel-kicker">Revision intelligence</div>
+                <h2>Prior Data → Updated Data → Routine Impact</h2>
+              </div>
+              <div class="panel-chip" id="comparisonSummary">No revision pair</div>
+            </div>
+            <div id="comparisonEmpty" class="empty-state">
+              Revalidate a decision to unlock a side-by-side evidence comparison
+              and downstream routine impact map.
+            </div>
+            <div id="comparisonContent" class="comparison-content" hidden>
+              <div class="revision-navigation">
+                <button class="lcars-button" id="viewPriorButton">View prior record</button>
+                <div class="revision-link">
+                  <span id="priorRevisionId">—</span>
+                  <strong>superseded by</strong>
+                  <span id="currentRevisionId">—</span>
+                </div>
+                <button class="lcars-button accent" id="viewCurrentButton">
+                  View updated record
+                </button>
+              </div>
+              <div class="comparison-grid">
+                <article class="revision-card prior-revision">
+                  <div class="detail-kicker">Prior evidence</div>
+                  <h3 id="priorRevisionTitle">—</h3>
+                  <p id="priorRevisionSummary">—</p>
+                  <ul class="evidence-list" id="priorRevisionFacts"></ul>
+                </article>
+                <article class="revision-card current-revision">
+                  <div class="detail-kicker">Updated evidence</div>
+                  <h3 id="currentRevisionTitle">—</h3>
+                  <p id="currentRevisionSummary">—</p>
+                  <ul class="evidence-list" id="currentRevisionFacts"></ul>
+                </article>
+              </div>
+              <div class="change-impact-grid">
+                <article class="change-surface">
+                  <div class="detail-kicker">Highlighted changes</div>
+                  <div class="change-list" id="changeList"></div>
+                </article>
+                <article class="change-surface">
+                  <div class="detail-kicker">Affected subroutines</div>
+                  <div class="routine-list" id="routineImpactList"></div>
+                </article>
+              </div>
+            </div>
+          </section>
+
           <section class="panel panel-audit">
             <div class="panel-header">
               <div>

@@ -48,6 +48,9 @@ DecisionGraph demonstrates a closed decision-governance loop:
 6. Revalidation fetches fresh DataHub MCP context and creates a replacement
    decision linked through a unique `supersedes` relationship.
 7. The original decision and its audit history remain intact.
+8. A side-by-side revision view preserves easy access to the prior and updated
+   context, highlights field-level changes, and explains the effect on each
+   downstream workflow routine.
 
 The included demonstration uses governed inventory and Northeast forecast
 datasets. The recommendation identifies three reorder candidates, confirms
@@ -99,7 +102,7 @@ live DataHub 1.6 deployment rather than only mocked endpoints.
 - Ensured MCP failures cannot silently fall back to fixture evidence.
 - Added retry-safe handling so failed projections cannot remain stuck.
 - Verified the complete workflow through the browser and at a mobile viewport.
-- Passed all eleven automated lifecycle and reliability tests.
+- Passed all twelve automated lifecycle and reliability tests.
 - Packaged the application with its dashboard assets and full setup instructions.
 
 ### What we learned

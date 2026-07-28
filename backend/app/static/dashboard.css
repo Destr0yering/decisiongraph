@@ -221,6 +221,132 @@ button {
   grid-column: 1 / -1;
 }
 
+.panel-change {
+  grid-column: 1 / -1;
+  border-color: rgba(177, 148, 216, 0.3);
+}
+
+.comparison-content {
+  display: grid;
+  gap: 14px;
+}
+
+.revision-navigation {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.revision-link {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--muted);
+}
+
+.revision-link span {
+  max-width: 30%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.revision-link strong {
+  color: var(--lavender);
+}
+
+.comparison-grid,
+.change-impact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.revision-card,
+.change-surface,
+.change-row,
+.routine-row {
+  border-radius: 22px;
+  border: 1px solid rgba(246, 188, 133, 0.1);
+  background: rgba(10, 11, 18, 0.3);
+}
+
+.revision-card,
+.change-surface {
+  padding: 16px;
+}
+
+.revision-card h3 {
+  margin: 8px 0;
+}
+
+.revision-card p {
+  color: #d9c6ba;
+}
+
+.prior-revision {
+  border-left: 5px solid var(--muted);
+}
+
+.current-revision {
+  border-left: 5px solid var(--cyan);
+}
+
+.change-list,
+.routine-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.change-row,
+.routine-row {
+  padding: 12px 14px;
+}
+
+.change-path,
+.routine-name {
+  color: var(--peach);
+  font-weight: 700;
+}
+
+.change-values {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.change-before,
+.change-after {
+  padding: 9px 10px;
+  border-radius: 14px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.change-before {
+  background: rgba(228, 106, 99, 0.12);
+  color: #ffb1ab;
+}
+
+.change-after {
+  background: rgba(139, 201, 216, 0.12);
+  color: var(--cyan);
+}
+
+.routine-row p {
+  margin: 6px 0 0;
+  color: #d9c6ba;
+}
+
+.routine-trigger {
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
 .panel-proof {
   grid-column: 1 / -1;
   border-color: rgba(139, 201, 216, 0.34);
@@ -480,6 +606,14 @@ button {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .revision-navigation {
+    grid-template-columns: 1fr;
+  }
+
+  .revision-link {
+    order: -1;
+  }
+
   .status-cluster {
     min-width: 0;
   }
@@ -509,7 +643,10 @@ button {
   }
 
   .proof-grid,
-  .proof-assets .dependency-list {
+  .proof-assets .dependency-list,
+  .comparison-grid,
+  .change-impact-grid,
+  .change-values {
     grid-template-columns: 1fr;
   }
 }

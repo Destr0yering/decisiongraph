@@ -53,6 +53,21 @@ const elements = {
   proofDocumentUrn: document.getElementById("proofDocumentUrn"),
   proofContextFacts: document.getElementById("proofContextFacts"),
   proofRelatedAssets: document.getElementById("proofRelatedAssets"),
+  comparisonSummary: document.getElementById("comparisonSummary"),
+  comparisonEmpty: document.getElementById("comparisonEmpty"),
+  comparisonContent: document.getElementById("comparisonContent"),
+  viewPriorButton: document.getElementById("viewPriorButton"),
+  viewCurrentButton: document.getElementById("viewCurrentButton"),
+  priorRevisionId: document.getElementById("priorRevisionId"),
+  currentRevisionId: document.getElementById("currentRevisionId"),
+  priorRevisionTitle: document.getElementById("priorRevisionTitle"),
+  currentRevisionTitle: document.getElementById("currentRevisionTitle"),
+  priorRevisionSummary: document.getElementById("priorRevisionSummary"),
+  currentRevisionSummary: document.getElementById("currentRevisionSummary"),
+  priorRevisionFacts: document.getElementById("priorRevisionFacts"),
+  currentRevisionFacts: document.getElementById("currentRevisionFacts"),
+  changeList: document.getElementById("changeList"),
+  routineImpactList: document.getElementById("routineImpactList"),
 };
 
 function statusPill(status) {
@@ -65,6 +80,28 @@ function formatTime(value) {
     return "Pending";
   }
   return new Date(value).toLocaleString();
+}
+
+function formatChangeValue(value) {
+  if (value === null || value === undefined) {
+    return "None";
+  }
+  const rendered =
+    typeof value === "string" ? value : JSON.stringify(value, null, 2);
+  return rendered.length > 600 ? `${rendered.slice(0, 597)}…` : rendered;
+}
+
+function contextFacts(decision) {
+  const facts = decision.context?.facts;
+  if (Array.isArray(facts)) {
+    return facts;
+  }
+  if (facts && typeof facts === "object") {
+    return Object.entries(facts).map(
+      ([key, value]) => `${key.replaceAll("_", " ")}: ${value}`
+    );
+  }
+  return decision.evidence || [];
 }
 
 function selectedDecision() {
@@ -164,6 +201,89 @@ async function renderAudit(decision) {
     .join("");
 }
 
+async function renderComparison(decision) {
+  const replacement = decision
+    ? state.decisions.find((item) => item.supersedes === decision.id)
+    : null;
+  const hasPair = Boolean(decision?.supersedes || replacement);
+  elements.comparisonEmpty.hidden = hasPair;
+  elements.comparisonContent.hidden = !hasPair;
+  elements.comparisonSummary.textContent = hasPair
+    ? "Loading revision pair"
+    : "No revision pair";
+  if (!hasPair) {
+    return;
+  }
+
+  const requestedId = decision.id;
+  try {
+    const comparison = await fetchJson(
+      apiUrl(`api/v1/decisions/${requestedId}/comparison`)
+    );
+    if (state.selectedId !== requestedId) {
+      return;
+    }
+    const { prior, current, changes, routine_impacts: routineImpacts } = comparison;
+    const changeLabel = changes.length === 1 ? "change" : "changes";
+    const routineLabel = routineImpacts.length === 1 ? "routine" : "routines";
+    elements.comparisonSummary.textContent =
+      `${changes.length} ${changeLabel} · ${routineImpacts.length} ${routineLabel}`;
+    elements.priorRevisionId.textContent = prior.id.slice(0, 8);
+    elements.priorRevisionId.title = prior.id;
+    elements.currentRevisionId.textContent = current.id.slice(0, 8);
+    elements.currentRevisionId.title = current.id;
+    elements.priorRevisionTitle.textContent = prior.title;
+    elements.currentRevisionTitle.textContent = current.title;
+    elements.priorRevisionSummary.textContent = prior.summary;
+    elements.currentRevisionSummary.textContent = current.summary;
+    elements.priorRevisionFacts.innerHTML = contextFacts(prior)
+      .map((fact) => `<li>${escapeHtml(fact)}</li>`)
+      .join("");
+    elements.currentRevisionFacts.innerHTML = contextFacts(current)
+      .map((fact) => `<li>${escapeHtml(fact)}</li>`)
+      .join("");
+    elements.changeList.innerHTML = changes.length
+      ? changes
+          .map(
+            (change) => `
+              <article class="change-row">
+                <div class="change-path">${escapeHtml(change.path)}</div>
+                <div class="change-values">
+                  <div class="change-before"><strong>Prior</strong><br>${escapeHtml(formatChangeValue(change.before))}</div>
+                  <div class="change-after"><strong>Updated</strong><br>${escapeHtml(formatChangeValue(change.after))}</div>
+                </div>
+              </article>
+            `
+          )
+          .join("")
+      : '<div class="empty-state">No evidence-bearing fields changed.</div>';
+    elements.routineImpactList.innerHTML = routineImpacts
+      .map(
+        (impact) => `
+          <article class="routine-row">
+            <div class="routine-name">${escapeHtml(impact.routine)}</div>
+            <p>${escapeHtml(impact.effect)}</p>
+            <div class="routine-trigger">Triggered by: ${escapeHtml(impact.triggered_by.join(", "))}</div>
+          </article>
+        `
+      )
+      .join("");
+    elements.viewPriorButton.onclick = () => {
+      state.selectedId = prior.id;
+      render();
+    };
+    elements.viewCurrentButton.onclick = () => {
+      state.selectedId = current.id;
+      render();
+    };
+  } catch (error) {
+    elements.comparisonSummary.textContent = "Comparison unavailable";
+    elements.comparisonContent.hidden = true;
+    elements.comparisonEmpty.hidden = false;
+    elements.comparisonEmpty.textContent = error.message;
+  }
+}
+
 function renderDecisionDetail() {
   const decision = selectedDecision();
   if (!decision) {
@@ -183,6 +303,7 @@ function renderDecisionDetail() {
       '<div class="empty-state">Dependency trace appears here.</div>';
     elements.evidenceList.innerHTML = "";
     void renderAudit(null);
+    void renderComparison(null);
     return;
   }
 
@@ -216,6 +337,7 @@ function renderDecisionDetail() {
     .map((fact) => `<li>${escapeHtml(fact)}</li>`)
     .join("");
   void renderAudit(decision);
+  void renderComparison(decision);
 }
 
 function render() {

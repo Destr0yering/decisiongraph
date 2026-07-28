@@ -33,7 +33,25 @@ record is retired as `SUPERSEDED`.
 - An invalidation event is append-only and targets recorded dependency edges.
 - Revalidation retrieves fresh MCP context and creates a new immutable decision
   revision; it never mutates the old evidence.
+- Every revision pair exposes the complete prior and current records, field-level
+  context changes, and an explicit map from those changes to affected workflow
+  routines.
 - Every invalidation signal is durable even when it impacts zero decisions.
+
+## Revision comparison and routine impact
+
+`GET /api/v1/decisions/{id}/comparison` accepts either side of a revision pair.
+It returns:
+
+- the complete immutable prior decision;
+- the complete updated decision;
+- highlighted changes to the summary, context source, MCP tools, retrieval time,
+  facts, nested snapshot paths, and dependencies;
+- the downstream effect on context retrieval, recommendation generation,
+  dependency monitoring, human approval, and DataHub Document projection.
+
+The comparison is derived from the persisted records. The dashboard does not
+invent a change narrative independently of the ledger.
 
 ## DataHub integration spike
 

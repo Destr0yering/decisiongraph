@@ -44,11 +44,14 @@
 
   function createDecision(supersedes = null) {
     const createdAt = now();
+    const isRevision = Boolean(supersedes);
     return {
       id: id(),
       title: "Review governed Northeast reorder candidates",
       summary:
-        "Evaluate three Northeast inventory candidates against the governed forecast horizon before approval.",
+        isRevision
+          ? "Evaluate four Northeast inventory candidates against the refreshed 45-day forecast horizon before approval."
+          : "Evaluate three Northeast inventory candidates against the governed 30-day forecast horizon before approval.",
       status: "PENDING_APPROVAL",
       projection_status: "NOT_CONFIGURED",
       projection_error: null,
@@ -61,22 +64,122 @@
         { asset_urn: forecastUrn, dependency_type: "DATASET_CONTEXT" },
       ],
       evidence: [
-        "3 governed Northeast reorder candidates are in scope.",
-        "Forecast freshness is FRESH within the 30-day planning horizon.",
-        "5 inventory fields and 5 forecast fields support the recommendation.",
+        isRevision
+          ? "4 governed Northeast reorder candidates are now in scope."
+          : "3 governed Northeast reorder candidates are in scope.",
+        isRevision
+          ? "Forecast freshness is REFRESHED within the updated 45-day planning horizon."
+          : "Forecast freshness is FRESH within the 30-day planning horizon.",
+        isRevision
+          ? "5 inventory fields and 6 forecast fields support the updated recommendation."
+          : "5 inventory fields and 5 forecast fields support the recommendation.",
         "This public GitHub Pages demo uses an explicit deterministic fixture; run the repository quickstart for live DataHub MCP retrieval and write-back.",
       ],
       context: {
         source: "deterministic_fixture",
         tools: [],
         fetched_at: createdAt,
-        facts: {
-          candidate_count: 3,
-          forecast_freshness: "FRESH",
+        facts: isRevision
+          ? [
+              "4 governed Northeast reorder candidates are now in scope.",
+              "Forecast freshness is REFRESHED for a 45-day horizon.",
+              "5 inventory fields and 6 forecast fields were evaluated.",
+            ]
+          : [
+              "3 governed Northeast reorder candidates are in scope.",
+              "Forecast freshness is FRESH for a 30-day horizon.",
+              "5 inventory fields and 5 forecast fields were evaluated.",
+            ],
+        snapshot: {
+          candidate_count: isRevision ? 4 : 3,
+          forecast_freshness: isRevision ? "REFRESHED" : "FRESH",
+          planning_horizon_days: isRevision ? 45 : 30,
           inventory_fields: 5,
-          forecast_fields: 5,
+          forecast_fields: isRevision ? 6 : 5,
         },
       },
+    };
+  }
+
+  function comparisonFor(store, selected) {
+    const prior = selected.supersedes
+      ? findDecision(store, selected.supersedes)
+      : selected;
+    const current = selected.supersedes
+      ? selected
+      : store.decisions.find((item) => item.supersedes === selected.id);
+    if (!current) {
+      throw new Error("No prior and updated revision pair exists");
+    }
+    const changes = [];
+    if (prior.summary !== current.summary) {
+      changes.push({
+        path: "summary",
+        change_type: "CHANGED",
+        before: prior.summary,
+        after: current.summary,
+      });
+    }
+    if (JSON.stringify(prior.context?.facts) !== JSON.stringify(current.context?.facts)) {
+      changes.push({
+        path: "context.facts",
+        change_type: "CHANGED",
+        before: prior.context?.facts,
+        after: current.context?.facts,
+      });
+    }
+    if (prior.context?.fetched_at !== current.context?.fetched_at) {
+      changes.push({
+        path: "context.fetched_at",
+        change_type: "CHANGED",
+        before: prior.context?.fetched_at,
+        after: current.context?.fetched_at,
+      });
+    }
+    const priorSnapshot = prior.context?.snapshot || {};
+    const currentSnapshot = current.context?.snapshot || {};
+    for (const key of new Set([
+      ...Object.keys(priorSnapshot),
+      ...Object.keys(currentSnapshot),
+    ])) {
+      if (JSON.stringify(priorSnapshot[key]) !== JSON.stringify(currentSnapshot[key])) {
+        changes.push({
+          path: `context.snapshot.${key}`,
+          change_type: "CHANGED",
+          before: priorSnapshot[key],
+          after: currentSnapshot[key],
+        });
+      }
+    }
+    const contextPaths = changes
+      .map((change) => change.path)
+      .filter((path) => path.startsWith("context"));
+    return {
+      prior,
+      current,
+      changes,
+      routine_impacts: [
+        {
+          routine: "retrieve_context",
+          effect: "Use the refreshed governed metadata and schema snapshot instead of the prior retrieval.",
+          triggered_by: contextPaths,
+        },
+        {
+          routine: "build_recommendation",
+          effect: "Recompute the recommendation and evidence from the updated context; do not replay the prior conclusion.",
+          triggered_by: contextPaths,
+        },
+        {
+          routine: "request_human_approval",
+          effect: "Require a fresh approval because the evidence-bearing decision revision changed.",
+          triggered_by: changes.map((change) => change.path),
+        },
+        {
+          routine: "project_datahub_document",
+          effect: "Keep the prior projection immutable and create a new projection only after approval.",
+          triggered_by: ["supersedes"],
+        },
+      ],
     };
   }
 
@@ -114,6 +217,13 @@
     const auditMatch = path.match(/^\/api\/v1\/decisions\/([^/]+)\/audit$/);
     if (method === "GET" && auditMatch) {
       return store.audits[auditMatch[1]] || [];
+    }
+
+    const comparisonMatch = path.match(
+      /^\/api\/v1\/decisions\/([^/]+)\/comparison$/
+    );
+    if (method === "GET" && comparisonMatch) {
+      return comparisonFor(store, findDecision(store, comparisonMatch[1]));
     }
 
     if (method === "POST" && path === "/api/v1/decisions/run") {
