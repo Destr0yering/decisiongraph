@@ -1,0 +1,68 @@
+{
+  "verification_type": "recorded_live_integration_and_revalidation_run",
+  "verified_at": "2026-07-29T06:38:17.3848628Z",
+  "datahub_version": "1.6.0",
+  "context_source": "datahub_mcp_server",
+  "mcp_tools": [
+    "get_entities",
+    "list_schema_fields",
+    "get_lineage",
+    "save_document"
+  ],
+  "datasets": [
+    {
+      "urn": "urn:li:dataset:(urn:li:dataPlatform:demo,fiction_retail.inventory,PROD)",
+      "schema_field_count": 5
+    },
+    {
+      "urn": "urn:li:dataset:(urn:li:dataPlatform:demo,fiction_retail.northeast_forecast,PROD)",
+      "schema_field_count": 5
+    }
+  ],
+  "context_facts": [
+    "DataHub MCP metadata changed from 3 to 4 governed Northeast reorder candidates.",
+    "Inventory freshness remained FRESH and the approved demand forecast covered 30 days.",
+    "DataHub MCP returned 5 inventory fields, 5 forecast fields, and both lineage snapshots."
+  ],
+  "analytics": {
+    "source": "datahub_analytics_agent",
+    "engine": "fiction-retail",
+    "model": "qwen.gguf",
+    "conversation_id": "d945a466-5064-48e3-b73e-e94546171db7",
+    "tool_calls": [
+      "execute_sql"
+    ],
+    "prior_row_count": 3,
+    "updated_row_count": 4,
+    "new_row": {
+      "product_id": "SKU-DG-104",
+      "on_hand_units": 55,
+      "forecast_units": 130,
+      "recommended_reorder_quantity": 75
+    },
+    "sql_rows_and_chart_match": true
+  },
+  "lifecycle": {
+    "prior_decision_id": "c707104c-35ed-4d0e-82e2-dc23c7d40101",
+    "prior_status": "SUPERSEDED",
+    "replacement_decision_id": "8674366e-f9f2-4e9d-a8c7-7a1911accdb2",
+    "replacement_status": "APPROVED",
+    "highlighted_change_count": 9,
+    "affected_routines": [
+      "retrieve_context",
+      "run_analytics_agent",
+      "build_recommendation",
+      "request_human_approval",
+      "project_datahub_document"
+    ]
+  },
+  "projection_status": "SYNCED",
+  "datahub_document_urn": "urn:li:document:shared-a9ca6662-3462-4995-b669-440ae4db99c2",
+  "related_assets": [
+    "urn:li:dataset:(urn:li:dataPlatform:demo,fiction_retail.inventory,PROD)",
+    "urn:li:dataset:(urn:li:dataPlatform:demo,fiction_retail.northeast_forecast,PROD)"
+  ],
+  "read_back_verified": true,
+  "automated_tests_passed": 17,
+  "disclosure": "Recorded verification snapshot from a local live DataHub 1.6 integration run using DataHub MCP and DataHub Analytics Agent. The GitHub Pages workflow remains deterministic and browser-local."
+}

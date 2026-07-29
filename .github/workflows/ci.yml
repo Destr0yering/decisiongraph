@@ -1,0 +1,43 @@
+name: DecisionGraph CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python 3.11 tests and artifact checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install DecisionGraph
+        working-directory: backend
+        run: python -m pip install -e .
+      - name: Run automated suite
+        working-directory: backend
+        run: python -m unittest discover -s tests -v
+      - name: Compile Python modules
+        working-directory: backend
+        run: python -m compileall -q app
+      - name: Validate browser JavaScript
+        run: |
+          node --check backend/app/static/dashboard.js
+          node --check backend/app/static/static-demo.js
+      - name: Validate published JSON artifacts
+        run: |
+          python -m json.tool examples/live-revalidation-proof.json > /dev/null
+          python -m json.tool backend/app/static/live-revalidation-proof.json > /dev/null
+          cmp examples/live-revalidation-proof.json backend/app/static/live-revalidation-proof.json

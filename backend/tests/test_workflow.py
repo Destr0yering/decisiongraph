@@ -601,10 +601,12 @@ class DecisionWorkflowTests(unittest.TestCase):
         self.assertIn("DecisionGraph Console", response.text)
         self.assertIn("Verified DataHub Integration Snapshot", response.text)
         self.assertIn("Prior Data → Updated Data → Routine Impact", response.text)
+        self.assertIn("Replay Live JSON", response.text)
+        self.assertIn("Agent Registry Compatibility", response.text)
 
     def test_recorded_live_integration_snapshot_is_served(self) -> None:
         client = TestClient(create_app(db_path=self.db_path))
-        response = client.get("/assets/integration-proof.json")
+        response = client.get("/assets/live-revalidation-proof.json")
         self.assertEqual(response.status_code, 200)
         proof = response.json()
         self.assertEqual(proof["context_source"], "datahub_mcp_server")

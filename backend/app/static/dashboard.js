@@ -83,6 +83,14 @@ const elements = {
   agentSkillUrn: document.getElementById("agentSkillUrn"),
   agentToolCount: document.getElementById("agentToolCount"),
   registerAgentButton: document.getElementById("registerAgentButton"),
+  replayLiveProofButton: document.getElementById("replayLiveProofButton"),
+  proofReplay: document.getElementById("proofReplay"),
+  proofReplayStatus: document.getElementById("proofReplayStatus"),
+  replayContextDetail: document.getElementById("replayContextDetail"),
+  replayAnalyticsDetail: document.getElementById("replayAnalyticsDetail"),
+  replayRevalidationDetail: document.getElementById("replayRevalidationDetail"),
+  replayProjectionDetail: document.getElementById("replayProjectionDetail"),
+  replayVerificationDetail: document.getElementById("replayVerificationDetail"),
 };
 
 function statusPill(status) {
@@ -459,7 +467,7 @@ async function loadAgentRegistry() {
 
 async function loadIntegrationProof() {
   try {
-    const response = await fetch(apiUrl("assets/integration-proof.json"));
+    const response = await fetch(apiUrl("assets/live-revalidation-proof.json"));
     if (!response.ok) {
       throw new Error(`Verification snapshot unavailable (${response.status})`);
     }
@@ -500,6 +508,95 @@ async function loadIntegrationProof() {
       .join("");
   } catch (error) {
     elements.proofDisclosure.textContent = error.message;
+  }
+}
+
+function replayDelay(milliseconds) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+function setReplayStage(stage, status) {
+  const step = document.querySelector(`[data-replay-stage="${stage}"]`);
+  step.classList.remove("active", "complete");
+  if (status) {
+    step.classList.add(status);
+  }
+}
+
+async function fetchLiveProof() {
+  const response = await fetch(
+    `${apiUrl("assets/live-revalidation-proof.json")}?replay=${Date.now()}`,
+    { cache: "no-store" }
+  );
+  if (!response.ok) {
+    throw new Error(`Live proof unavailable (${response.status})`);
+  }
+  return response.json();
+}
+
+async function replayLiveProof() {
+  elements.replayLiveProofButton.disabled = true;
+  elements.proofReplay.hidden = false;
+  elements.proofReplayStatus.textContent =
+    "Refetching the published live-revalidation-proof.json artifact…";
+  ["context", "analytics", "revalidation", "projection", "verification"].forEach(
+    (stage) => setReplayStage(stage, "")
+  );
+
+  try {
+    const proof = await fetchLiveProof();
+    const fieldTotal = proof.datasets.reduce(
+      (total, dataset) => total + dataset.schema_field_count,
+      0
+    );
+
+    setReplayStage("context", "active");
+    elements.proofReplayStatus.textContent = "Stage 1 of 5 · Governed context";
+    elements.replayContextDetail.textContent =
+      `${proof.context_source}; ${fieldTotal} schema fields across ` +
+      `${proof.datasets.length} datasets via ${proof.mcp_tools.slice(0, 3).join(", ")}.`;
+    await replayDelay(550);
+    setReplayStage("context", "complete");
+
+    setReplayStage("analytics", "active");
+    elements.proofReplayStatus.textContent = "Stage 2 of 5 · Reproducible SQL result";
+    const newRow = proof.analytics.new_row;
+    elements.replayAnalyticsDetail.textContent =
+      `${proof.analytics.prior_row_count} → ${proof.analytics.updated_row_count} rows; ` +
+      `${newRow.product_id} adds ${newRow.recommended_reorder_quantity} reorder units.`;
+    await replayDelay(550);
+    setReplayStage("analytics", "complete");
+
+    setReplayStage("revalidation", "active");
+    elements.proofReplayStatus.textContent = "Stage 3 of 5 · Change and routine impact";
+    elements.replayRevalidationDetail.textContent =
+      `${proof.lifecycle.highlighted_change_count} highlighted changes affect ` +
+      `${proof.lifecycle.affected_routines.length} routines; prior record is ` +
+      `${proof.lifecycle.prior_status}, replacement is ${proof.lifecycle.replacement_status}.`;
+    await replayDelay(550);
+    setReplayStage("revalidation", "complete");
+
+    setReplayStage("projection", "active");
+    elements.proofReplayStatus.textContent = "Stage 4 of 5 · Approval-gated write-back";
+    elements.replayProjectionDetail.textContent =
+      `${proof.projection_status} via save_document; ${proof.related_assets.length} ` +
+      `related dataset assets attached to ${proof.datahub_document_urn}.`;
+    await replayDelay(550);
+    setReplayStage("projection", "complete");
+
+    setReplayStage("verification", "active");
+    elements.proofReplayStatus.textContent = "Stage 5 of 5 · Verified read-back";
+    elements.replayVerificationDetail.textContent =
+      `${proof.read_back_verified ? "Read-back verified" : "Read-back not verified"}; ` +
+      `${proof.automated_tests_passed} automated tests recorded as passing.`;
+    await replayDelay(550);
+    setReplayStage("verification", "complete");
+    elements.proofReplayStatus.textContent =
+      `Replay complete · captured ${new Date(proof.verified_at).toLocaleString()}`;
+  } catch (error) {
+    elements.proofReplayStatus.textContent = error.message;
+  } finally {
+    elements.replayLiveProofButton.disabled = false;
   }
 }
 
@@ -571,6 +668,10 @@ elements.registerAgentButton.addEventListener("click", () =>
     return selectedDecision();
   })
 );
+
+elements.replayLiveProofButton.addEventListener("click", () => {
+  void replayLiveProof();
+});
 
 async function boot() {
   await Promise.all([

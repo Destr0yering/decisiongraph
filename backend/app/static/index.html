@@ -210,18 +210,17 @@
             <div class="panel-header">
               <div>
                 <div class="panel-kicker">DataHub Agent Context Kit</div>
-                <h2>Agent Registry</h2>
+                <h2>Agent Registry Compatibility</h2>
               </div>
               <div class="panel-chip" id="agentRegistryStatus">Not registered</div>
             </div>
             <p class="proof-disclosure" id="agentRegistryDetail">
-              Register DecisionGraph, its evidence-bound governance skill, its
-              callable tools, and the datasets it consumes as native DataHub
-              Agent Registry entities.
+              Compatibility preview only. The verified DataHub 1.6 run reports
+              sdk_unavailable and did not create Agent Registry entities.
             </p>
             <div class="action-row">
               <button class="lcars-button accent" id="registerAgentButton">
-                Register in DataHub
+                Attempt compatible registration
               </button>
             </div>
             <div class="proof-grid">
@@ -246,11 +245,68 @@
                 <div class="panel-kicker">Integration evidence</div>
                 <h2>Verified DataHub Integration Snapshot</h2>
               </div>
-              <div class="panel-chip proof-chip">Recorded live run</div>
+              <div class="proof-header-actions">
+                <div class="panel-chip proof-chip">Recorded live run</div>
+                <button class="lcars-button accent" id="replayLiveProofButton">
+                  Replay Live JSON
+                </button>
+              </div>
             </div>
             <p class="proof-disclosure" id="proofDisclosure">
               Loading the recorded verification snapshot…
             </p>
+            <div class="proof-replay-disclosure">
+              <strong>Evidence boundary:</strong>
+              this replay animates captured results from the verified local
+              DataHub run. It does not make live MCP calls from this browser.
+            </div>
+            <div
+              class="proof-replay"
+              id="proofReplay"
+              aria-live="polite"
+              hidden
+            >
+              <div class="proof-replay-status" id="proofReplayStatus">
+                Ready to load the published proof artifact.
+              </div>
+              <div class="proof-replay-timeline">
+                <article class="proof-replay-step" data-replay-stage="context">
+                  <span>01</span>
+                  <div>
+                    <strong>Retrieve governed context</strong>
+                    <p id="replayContextDetail">Waiting for recorded MCP evidence.</p>
+                  </div>
+                </article>
+                <article class="proof-replay-step" data-replay-stage="analytics">
+                  <span>02</span>
+                  <div>
+                    <strong>Run Analytics Agent SQL</strong>
+                    <p id="replayAnalyticsDetail">Waiting for captured query results.</p>
+                  </div>
+                </article>
+                <article class="proof-replay-step" data-replay-stage="revalidation">
+                  <span>03</span>
+                  <div>
+                    <strong>Compare and revalidate</strong>
+                    <p id="replayRevalidationDetail">Waiting for revision impact.</p>
+                  </div>
+                </article>
+                <article class="proof-replay-step" data-replay-stage="projection">
+                  <span>04</span>
+                  <div>
+                    <strong>Project DataHub Document</strong>
+                    <p id="replayProjectionDetail">Waiting for recorded write-back.</p>
+                  </div>
+                </article>
+                <article class="proof-replay-step" data-replay-stage="verification">
+                  <span>05</span>
+                  <div>
+                    <strong>Verify immutable read-back</strong>
+                    <p id="replayVerificationDetail">Waiting for verification.</p>
+                  </div>
+                </article>
+              </div>
+            </div>
             <div class="proof-grid">
               <article class="proof-card">
                 <span class="meta-label">DataHub</span>
@@ -307,6 +363,6 @@
     </div>
 
     <script src="./assets/static-demo.js?v=20260729" defer></script>
-    <script src="./assets/dashboard.js?v=20260729" defer></script>
+    <script src="./assets/dashboard.js?v=20260729b" defer></script>
   </body>
 </html>
