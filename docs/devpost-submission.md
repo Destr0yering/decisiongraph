@@ -75,8 +75,10 @@ The DataHub integration has two deliberate boundaries:
   `datahub-project/analytics-agent` conversation and SSE APIs.
 - Approved decisions use MCP `save_document` and are read back with
   `get_entities`.
-- A version-aware Agent Registry adapter catalogs the agent, governance skill,
-  REST tools, and consumed datasets when a compatible DataHub SDK is installed.
+- A version-aware Agent Registry compatibility adapter prepares the agent,
+  governance skill, REST tools, and consumed-dataset metadata when compatible
+  SDK/server APIs are available. DataHub 1.6 reports `sdk_unavailable`; the
+  recorded live proof does not claim that Agent Registry entities were created.
 
 The service stores workflow state, context provenance, audit events, projection
 status, invalidation events, and supersession relationships. Projection failures

@@ -105,8 +105,10 @@ inspectable outbox state for the hackathon MVP.
 ## Agent Context Kit and Agent Registry
 
 DecisionGraph includes the official `datahub-agent-context` package and a
-version-aware registry adapter. When the installed DataHub SDK exposes the
-current Agent Registry entity APIs, the adapter emits:
+version-aware Agent Registry compatibility adapter. This is not a completed
+Agent Registry registration against the verified DataHub 1.6 environment. When
+a future installed SDK and server expose compatible Agent Registry entity APIs,
+the adapter can emit:
 
 - five REST endpoint tools;
 - the `evidence-bound-decision-governance` skill;
@@ -116,4 +118,5 @@ current Agent Registry entity APIs, the adapter emits:
 
 DataHub 1.6's released Python SDK does not contain the Agent Registry entity
 classes currently documented on DataHub main. DecisionGraph detects that
-boundary and returns `sdk_unavailable`; it does not report a false registration.
+boundary and returns `sdk_unavailable`; no Agent Registry entities were created
+as part of the recorded live proof.

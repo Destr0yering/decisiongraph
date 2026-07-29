@@ -1,5 +1,7 @@
 # DecisionGraph
 
+[![DecisionGraph CI](https://github.com/Destr0yering/decisiongraph/actions/workflows/ci.yml/badge.svg)](https://github.com/Destr0yering/decisiongraph/actions/workflows/ci.yml)
+
 DecisionGraph gives AI-assisted decisions traceable evidence, approval history,
 and recall when the DataHub context they depend on changes. It reads governed
 dataset context through the official open-source DataHub MCP Server and writes
@@ -110,12 +112,13 @@ $env:DATAHUB_MCP_MUTATIONS_ENABLED = "true"
 Approval then calls `save_document` with the governed dataset URNs as related
 assets and immediately verifies the returned Document with `get_entities`.
 
-The Agent Registry endpoint catalogs DecisionGraph, five REST tools, the generic
-governance skill, and both consumed datasets when the installed DataHub SDK
-contains `datahub.api.entities.agent`. The released DataHub 1.6 Python SDK used
-by the local quickstart does not yet contain those current-main Agent Registry
-entities, so the endpoint reports `sdk_unavailable` instead of claiming a
-registration. It is ready for a compatible SDK/server release.
+DecisionGraph includes an **Agent Registry compatibility adapter**, not a
+completed Agent Registry registration against DataHub 1.6. The adapter prepares
+metadata for DecisionGraph, five REST tools, the generic governance skill, and
+both consumed datasets only when the installed SDK exposes
+`datahub.api.entities.agent`. The released DataHub 1.6 Python SDK used by the
+verified local run does not expose those current-main entity APIs. The endpoint
+therefore reports `sdk_unavailable` and never claims that registration occurred.
 
 Without `DATAHUB_MCP_ENABLED`, decisions use the explicit
 `deterministic_fixture` context source. Without `DATAHUB_GMS_URL`, decisions
@@ -151,6 +154,12 @@ Document URN, `SYNCED` projection result, related dataset assets, and successful
 read-back. The chart and displayed answer are rebound to the authoritative SQL
 rows before persistence. This evidence panel does not claim that the
 browser-local workflow is connected to DataHub.
+
+Judges can select **Replay Live JSON** to refetch the published
+`live-revalidation-proof.json` artifact and animate its captured MCP retrieval,
+Analytics Agent SQL result, revalidation impact, Document projection, and
+read-back verification. The replay is recorded evidence; it does not make new
+MCP calls from GitHub Pages.
 
 The repository also includes a root `Dockerfile` and `render.yaml` for anyone
 who prefers a container-hosted demo.
@@ -194,7 +203,7 @@ example.
 - [x] Downstream `get_lineage` and richer entity context snapshots
 - [x] DataHub Analytics Agent conversation/SSE integration
 - [x] Approval-gated MCP `save_document` with read-back verification
-- [x] Agent Context Kit dependency and version-aware Agent Registry adapter
+- [x] Agent Context Kit dependency and version-aware Agent Registry compatibility adapter
 - [x] Generic DataHub Decision Governance skill
 - [x] Durable invalidation-event ledger
 - [x] Demo video and submission copy
