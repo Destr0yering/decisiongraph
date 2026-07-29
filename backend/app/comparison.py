@@ -121,6 +121,12 @@ def compare_decisions(prior: Decision, current: Decision) -> DecisionComparison:
     current_analysis = (
         current.analysis.model_dump(mode="json") if current.analysis else None
     )
+    # Charts are derived views. Compare their authoritative SQL rows instead
+    # of surfacing model-generated chart internals as evidence changes.
+    if prior_analysis:
+        prior_analysis.pop("chart", None)
+    if current_analysis:
+        current_analysis.pop("chart", None)
     changes.extend(
         _snapshot_changes(
             prior_analysis,

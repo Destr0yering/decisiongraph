@@ -6,8 +6,8 @@
   "question": "Using only the governed Fiction Retail inventory and Northeast forecast datasets, identify products whose forecast demand exceeds on-hand inventory. Return the product_id, on_hand_units, forecast_units, and recommended_reorder_quantity. Include the SQL and a chart.",
   "conversation_id": "example-conversation-id",
   "engine_name": "example-configured-engine",
-  "answer": "Three Northeast products require reorder because forecast demand exceeds current on-hand inventory.",
-  "sql": "SELECT i.product_id, i.on_hand_units, f.forecast_units, f.forecast_units - i.on_hand_units AS recommended_reorder_quantity FROM fiction_retail.inventory i JOIN fiction_retail.northeast_forecast f ON f.product_id = i.product_id AND f.region = i.region WHERE i.region = 'Northeast' AND f.forecast_units > i.on_hand_units",
+  "answer": "Analytics Agent executed the governed SQL query and returned 3 Northeast reorder candidates: SKU-DG-101, SKU-DG-102, SKU-DG-103.",
+  "sql": "SELECT i.product_id, i.on_hand_units, f.forecast_units, f.forecast_units - i.on_hand_units AS recommended_reorder_quantity FROM inventory AS i JOIN northeast_forecast AS f ON i.product_id = f.product_id AND i.region = f.region WHERE i.region = 'Northeast' AND f.forecast_units > i.on_hand_units",
   "columns": [
     "product_id",
     "on_hand_units",
@@ -52,6 +52,6 @@
     "label": "Illustrative"
   },
   "tool_calls": [
-    "run_sql"
+    "execute_sql"
   ]
 }

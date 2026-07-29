@@ -13,6 +13,8 @@ import sys
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
+from .mcp_runtime import datahub_mcp_environment
+
 
 class DataHubUnavailable(RuntimeError):
     """Raised when an explicitly configured DataHub endpoint cannot be reached."""
@@ -143,13 +145,12 @@ class DataHubMCPAdapter(DataHubAdapter):
                 "FastMCP is required for MCP document write-back"
             ) from error
 
-        environment = {
-            "DATAHUB_GMS_URL": self.config.server,
-            "DATAHUB_GMS_TOKEN": self.config.token or "",
-            "TOOLS_IS_MUTATION_ENABLED": "true",
-            "TOOLS_IS_USER_ENABLED": "false",
-            "SAVE_DOCUMENT_TOOL_ENABLED": "true",
-        }
+        environment = datahub_mcp_environment(
+            gms_url=self.config.server,
+            gms_token=self.config.token,
+            mutations_enabled=True,
+            save_document_enabled=True,
+        )
         transport = StdioTransport(
             command=sys.executable,
             args=[

@@ -5,6 +5,7 @@ import os
 import sys
 from typing import Protocol
 
+from .mcp_runtime import datahub_mcp_environment
 from .models import DecisionContext, Dependency
 
 
@@ -203,12 +204,11 @@ class DataHubMCPContextProvider:
                 "FastMCP is not installed; install DecisionGraph dependencies"
             ) from error
 
-        environment = {
-            "DATAHUB_GMS_URL": self.config.gms_url,
-            "DATAHUB_GMS_TOKEN": self.config.gms_token or "",
-            "TOOLS_IS_MUTATION_ENABLED": "false",
-            "TOOLS_IS_USER_ENABLED": "false",
-        }
+        environment = datahub_mcp_environment(
+            gms_url=self.config.gms_url,
+            gms_token=self.config.gms_token,
+            mutations_enabled=False,
+        )
         transport = StdioTransport(
             command=sys.executable,
             args=[

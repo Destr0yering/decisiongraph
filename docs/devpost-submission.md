@@ -115,7 +115,7 @@ live DataHub 1.6 deployment rather than only mocked endpoints.
 - Ensured MCP failures cannot silently fall back to fixture evidence.
 - Added retry-safe handling so failed projections cannot remain stuck.
 - Verified the complete workflow through the browser and at a mobile viewport.
-- Passed all sixteen automated lifecycle, integration-contract, and reliability tests.
+- Passed all seventeen automated lifecycle, integration-contract, and reliability tests.
 - Packaged the application with its dashboard assets and full setup instructions.
 
 ### What we learned
@@ -145,11 +145,9 @@ Kit, DataHub Analytics Agent, FastMCP, uv, Docker, HTML, CSS, and JavaScript.
 
 ## Required public links
 
-Replace these placeholders before submission:
-
 - Project/demo URL: https://destr0yering.github.io/decisiongraph/
 - Public Apache-2.0 repository: https://github.com/Destr0yering/decisiongraph
-- Public YouTube, Vimeo, or Youku video: `VIDEO_URL_REQUIRED`
+- Public YouTube video: https://youtu.be/uMznzfsk7uw
 
 ## Judge testing instructions
 
@@ -170,8 +168,10 @@ Replace these placeholders before submission:
    relationship remain visible.
 8. Scroll to **Verified DataHub Integration Snapshot**. This clearly labeled
    recorded live-run evidence shows the separate DataHub 1.6 path: official MCP
-   tools, retrieved schema-field counts, `SYNCED` Document projection, Document
-   URN, two related dataset assets, and successful DataHub read-back.
+   tools, retrieved schema-field counts, the Analytics Agent conversation and
+   SQL execution, a 3-to-4-row evidence change, five affected routines,
+   `SYNCED` Document projection, Document URN, two related dataset assets, and
+   successful DataHub read-back.
 
 ### Local path
 
@@ -181,7 +181,10 @@ In this mode, **Run Decision** reports context source `datahub_mcp_server` and
 tools `get_entities`, `list_schema_fields`, and `get_lineage`. With MCP
 mutations enabled, approval becomes `SYNCED` and the record includes its native
 DataHub Document URN. Analytics Agent output is only claimed when its separately
-configured service is enabled.
+configured service is enabled. The recorded live run used the `fiction-retail`
+engine and local `qwen.gguf` model; DecisionGraph accepted only a successful SQL
+event, rebound the chart to those SQL rows, and derived its displayed answer
+from the same rows.
 
 No paid service or private credential is required for the local quickstart.
 
@@ -192,14 +195,14 @@ No paid service or private credential is required for the local quickstart.
 - [x] Repository contains the full source, assets, examples, and setup instructions.
 - [x] Apache License 2.0 is stored in the root `LICENSE` file.
 - [x] GitHub identifies the root license as Apache-2.0.
-- [ ] Video is publicly visible on YouTube, Vimeo, or Youku.
+- [x] Video is publicly visible on YouTube, Vimeo, or Youku.
 - [x] Video is shorter than three minutes.
 - [x] Video contains visible footage of the working application.
 - [x] Video contains no unlicensed music, franchise imagery, or unrelated marks.
 - [x] Submission description is in English.
 - [x] Sample inputs and decision output are present in `examples/`.
 - [x] DataHub MCP use and DataHub write-back are clearly described.
-- [ ] All three public URLs replace the placeholders above.
+- [x] All three public URLs are present above.
 
 ## Optional feedback-prize draft
 

@@ -14,6 +14,7 @@ from app.analytics_agent import (
 )
 from app.main import create_app
 from app.mcp_context import ContextUnavailable
+from app.mcp_runtime import datahub_mcp_environment
 from app.models import (
     AgentRegistration,
     DecisionContext,
@@ -156,6 +157,17 @@ class SuccessfulRegistrar:
 
 
 class DecisionWorkflowTests(unittest.TestCase):
+    def test_mcp_subprocess_disables_telemetry_by_default(self) -> None:
+        environment = datahub_mcp_environment(
+            gms_url="http://datahub.test",
+            gms_token=None,
+            mutations_enabled=False,
+        )
+
+        self.assertEqual(
+            environment["DATAHUB_TELEMETRY_ENABLED"], "false"
+        )
+
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
         self.db_path = Path(self.temp_dir.name) / "decisiongraph.db"
@@ -535,7 +547,24 @@ class DecisionWorkflowTests(unittest.TestCase):
         self.assertEqual(analysis.conversation_id, "conversation-42")
         self.assertEqual(analysis.sql, "SELECT sku, reorder_quantity FROM governed_reorders")
         self.assertEqual(analysis.rows[0]["reorder_quantity"], 25)
-        self.assertEqual(analysis.chart, {"mark": "bar"})
+        self.assertEqual(
+            analysis.answer,
+            (
+                "Analytics Agent executed the governed SQL query and returned "
+                "1 Northeast reorder candidates."
+            ),
+        )
+        self.assertEqual(
+            analysis.chart,
+            {
+                "mark": "bar",
+                "data": {
+                    "values": [
+                        {"sku": "NE-104", "reorder_quantity": 25}
+                    ]
+                },
+            },
+        )
         self.assertEqual(analysis.context_quality["score"], 5)
         self.assertEqual(analysis.tool_calls, ["run_sql"])
 
@@ -580,12 +609,21 @@ class DecisionWorkflowTests(unittest.TestCase):
         proof = response.json()
         self.assertEqual(proof["context_source"], "datahub_mcp_server")
         self.assertEqual(
-            proof["mcp_tools"], ["get_entities", "list_schema_fields"]
+            proof["mcp_tools"],
+            [
+                "get_entities",
+                "list_schema_fields",
+                "get_lineage",
+                "save_document",
+            ],
         )
         self.assertEqual(proof["projection_status"], "SYNCED")
         self.assertTrue(proof["read_back_verified"])
         self.assertEqual(len(proof["context_facts"]), 3)
         self.assertEqual(len(proof["related_assets"]), 2)
+        self.assertEqual(proof["analytics"]["updated_row_count"], 4)
+        self.assertTrue(proof["analytics"]["sql_rows_and_chart_match"])
+        self.assertEqual(proof["automated_tests_passed"], 17)
 
 
 if __name__ == "__main__":

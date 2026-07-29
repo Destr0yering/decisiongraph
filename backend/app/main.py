@@ -340,8 +340,10 @@ def create_app(
             Decision(
                 title=f"{decision.title} (Revalidated)",
                 summary=(
-                    f"{decision.summary} Revalidated with freshly retrieved "
-                    "DataHub context after an upstream dependency change."
+                    f"Review {len(analysis.rows)} Northeast reorder candidates "
+                    f"computed by {'DataHub Analytics Agent' if analysis.source == 'datahub_analytics_agent' else 'the deterministic analytics fixture'} "
+                    "against freshly retrieved governed DataHub evidence after "
+                    "an upstream dependency change."
                 ),
                 evidence=[
                     *context.facts,

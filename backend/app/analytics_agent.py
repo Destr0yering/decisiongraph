@@ -13,11 +13,26 @@ from urllib.request import Request, urlopen
 from .models import DecisionContext, ReorderAnalysis
 
 
+REORDER_SQL = (
+    "SELECT i.product_id, i.on_hand_units, f.forecast_units, "
+    "f.forecast_units - i.on_hand_units AS recommended_reorder_quantity "
+    "FROM inventory AS i JOIN northeast_forecast AS f "
+    "ON i.product_id = f.product_id AND i.region = f.region "
+    "WHERE i.region = 'Northeast' "
+    "AND f.forecast_units > i.on_hand_units"
+)
+
 REORDER_QUESTION = (
     "Using only the governed Fiction Retail inventory and Northeast forecast "
     "datasets, identify products whose forecast demand exceeds on-hand "
     "inventory. Return the product_id, on_hand_units, forecast_units, and "
-    "recommended_reorder_quantity. Include the SQL and a chart."
+    "recommended_reorder_quantity. Include the SQL and a chart. In the "
+    "configured SQL engine, the governed DataHub datasets are mapped to the "
+    "exact SQLite table names inventory and northeast_forecast. Use "
+    "execute_sql exactly once with this governed query, without adding any "
+    f"columns or conditions: {REORDER_SQL}. Do not infer or invent rows if "
+    "SQL execution fails. DecisionGraph already verified the DataHub context, "
+    "so do not call additional catalog or business-context search tools."
 )
 
 
@@ -94,15 +109,7 @@ class FixtureReorderAnalysisProvider:
                 "Three Northeast products require reorder because governed "
                 "forecast demand exceeds current on-hand inventory."
             ),
-            sql=(
-                "SELECT i.product_id, i.on_hand_units, f.forecast_units, "
-                "f.forecast_units - i.on_hand_units AS "
-                "recommended_reorder_quantity FROM fiction_retail.inventory i "
-                "JOIN fiction_retail.northeast_forecast f "
-                "ON f.product_id = i.product_id AND f.region = i.region "
-                "WHERE i.region = 'Northeast' "
-                "AND f.forecast_units > i.on_hand_units"
-            ),
+            sql=REORDER_SQL,
             columns=list(rows[0]),
             rows=rows,
             chart={
@@ -239,14 +246,6 @@ class AnalyticsAgentClient:
             ),
             None,
         )
-        complete_event = next(
-            (
-                event
-                for event in reversed(events)
-                if event.get("event") == "COMPLETE"
-            ),
-            None,
-        )
         sql_payload = (
             sql_event.get("payload", {})
             if isinstance(sql_event, dict)
@@ -255,11 +254,6 @@ class AnalyticsAgentClient:
         chart_payload = (
             chart_event.get("payload", {})
             if isinstance(chart_event, dict)
-            else {}
-        )
-        complete_payload = (
-            complete_event.get("payload", {})
-            if isinstance(complete_event, dict)
             else {}
         )
         if not isinstance(sql_payload, dict) or not sql_payload.get("sql"):
@@ -272,6 +266,19 @@ class AnalyticsAgentClient:
         normalized_rows = [
             row for row in rows if isinstance(row, dict)
         ]
+        chart = (
+            chart_payload.get("vega_lite_spec")
+            if isinstance(chart_payload, dict)
+            and isinstance(chart_payload.get("vega_lite_spec"), dict)
+            else None
+        )
+        if chart is not None:
+            # The SQL event is the authoritative result. Some smaller local
+            # models can produce a valid chart design but populate it with
+            # illustrative values. Keep the design while binding it to the
+            # rows that the configured engine actually returned.
+            chart = json.loads(json.dumps(chart))
+            chart["data"] = {"values": normalized_rows}
         raw_quality, _ = await asyncio.to_thread(
             self._request,
             "GET",
@@ -288,29 +295,34 @@ class AnalyticsAgentClient:
             and isinstance((payload := event.get("payload")), dict)
             and payload.get("tool_name")
         ]
+        product_ids = [
+            str(row["product_id"])
+            for row in normalized_rows
+            if row.get("product_id") is not None
+        ]
+        grounded_answer = (
+            "Analytics Agent executed the governed SQL query and returned "
+            f"{len(normalized_rows)} Northeast reorder candidates"
+            f": {', '.join(product_ids)}."
+            if product_ids
+            else (
+                "Analytics Agent executed the governed SQL query and returned "
+                f"{len(normalized_rows)} Northeast reorder candidates."
+            )
+        )
         return ReorderAnalysis(
             source="datahub_analytics_agent",
             question=REORDER_QUESTION,
             conversation_id=conversation_id,
             engine_name=self.config.engine_name,
-            answer=str(
-                complete_payload.get("text")
-                or "Analytics Agent returned a governed reorder analysis."
-            ),
+            answer=grounded_answer,
             sql=str(sql_payload["sql"]),
             columns=[
                 str(column)
                 for column in sql_payload.get("columns", [])
             ],
             rows=normalized_rows,
-            chart=(
-                chart_payload.get("vega_lite_spec")
-                if isinstance(chart_payload, dict)
-                and isinstance(
-                    chart_payload.get("vega_lite_spec"), dict
-                )
-                else None
-            ),
+            chart=chart,
             context_quality=quality if isinstance(quality, dict) else None,
             tool_calls=tool_calls,
         )

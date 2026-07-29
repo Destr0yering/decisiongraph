@@ -50,6 +50,9 @@ const elements = {
   proofSchemaFields: document.getElementById("proofSchemaFields"),
   proofProjectionStatus: document.getElementById("proofProjectionStatus"),
   proofReadBack: document.getElementById("proofReadBack"),
+  proofAnalyticsAgent: document.getElementById("proofAnalyticsAgent"),
+  proofRowChange: document.getElementById("proofRowChange"),
+  proofRoutineCount: document.getElementById("proofRoutineCount"),
   proofDocumentUrn: document.getElementById("proofDocumentUrn"),
   proofContextFacts: document.getElementById("proofContextFacts"),
   proofRelatedAssets: document.getElementById("proofRelatedAssets"),
@@ -101,6 +104,17 @@ function formatChangeValue(value) {
   const rendered =
     typeof value === "string" ? value : JSON.stringify(value, null, 2);
   return rendered.length > 600 ? `${rendered.slice(0, 597)}…` : rendered;
+}
+
+function formatComparisonValue(path, value) {
+  if (path === "analysis.rows" && Array.isArray(value)) {
+    const rows = value.map(
+      (row) =>
+        `${row.product_id}: on hand ${row.on_hand_units}, forecast ${row.forecast_units}, reorder ${row.recommended_reorder_quantity}`
+    );
+    return `${value.length} verified SQL rows\n${rows.join("\n")}`;
+  }
+  return formatChangeValue(value);
 }
 
 function contextFacts(decision) {
@@ -254,15 +268,25 @@ async function renderComparison(decision) {
     elements.currentRevisionFacts.innerHTML = contextFacts(current)
       .map((fact) => `<li>${escapeHtml(fact)}</li>`)
       .join("");
-    elements.changeList.innerHTML = changes.length
-      ? changes
+    const changePriority = new Map([
+      ["analysis.rows", 0],
+      ["context.facts", 1],
+      ["summary", 2],
+    ]);
+    const orderedChanges = [...changes].sort(
+      (left, right) =>
+        (changePriority.get(left.path) ?? 10) -
+        (changePriority.get(right.path) ?? 10)
+    );
+    elements.changeList.innerHTML = orderedChanges.length
+      ? orderedChanges
           .map(
             (change) => `
               <article class="change-row">
                 <div class="change-path">${escapeHtml(change.path)}</div>
                 <div class="change-values">
-                  <div class="change-before"><strong>Prior</strong><br>${escapeHtml(formatChangeValue(change.before))}</div>
-                  <div class="change-after"><strong>Updated</strong><br>${escapeHtml(formatChangeValue(change.after))}</div>
+                  <div class="change-before"><strong>Prior</strong><br>${escapeHtml(formatComparisonValue(change.path, change.before))}</div>
+                  <div class="change-after"><strong>Updated</strong><br>${escapeHtml(formatComparisonValue(change.path, change.after))}</div>
                 </div>
               </article>
             `
@@ -454,6 +478,12 @@ async function loadIntegrationProof() {
     elements.proofReadBack.textContent = proof.read_back_verified
       ? "VERIFIED"
       : "NOT VERIFIED";
+    elements.proofAnalyticsAgent.textContent =
+      `${proof.analytics.source} · ${proof.analytics.engine}`;
+    elements.proofRowChange.textContent =
+      `${proof.analytics.prior_row_count} → ${proof.analytics.updated_row_count} SQL rows`;
+    elements.proofRoutineCount.textContent =
+      `${proof.lifecycle.affected_routines.length} routines`;
     elements.proofDocumentUrn.textContent = proof.datahub_document_urn;
     elements.proofContextFacts.innerHTML = proof.context_facts
       .map((fact) => `<li>${escapeHtml(fact)}</li>`)

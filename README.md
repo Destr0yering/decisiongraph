@@ -132,6 +132,8 @@ The public judge demo is hosted without billing details through GitHub Pages:
 
 **[Open the DecisionGraph judge demo](https://destr0yering.github.io/decisiongraph/)**
 
+**[Watch the public 2:57 demonstration video](https://youtu.be/uMznzfsk7uw)**
+
 The browser demo intentionally runs without private credentials and labels its
 context source as `deterministic_fixture`. It demonstrates the complete
 decision, approval, invalidation, revalidation, supersession, and audit workflow
@@ -143,10 +145,12 @@ DataHub Documents.
 
 The public page also includes a clearly labeled **recorded live integration
 snapshot** from the verified local DataHub 1.6 run. It exposes the MCP context
-source and tools, retrieved field counts, native Document URN, `SYNCED`
-projection result, related dataset assets, and successful read-back. This
-evidence panel does not claim that the browser-local workflow is connected to
-DataHub.
+source and tools, retrieved field counts, the real Analytics Agent conversation
+and SQL result, the live 3-to-4-row revalidation, affected routines, native
+Document URN, `SYNCED` projection result, related dataset assets, and successful
+read-back. The chart and displayed answer are rebound to the authoritative SQL
+rows before persistence. This evidence panel does not claim that the
+browser-local workflow is connected to DataHub.
 
 The repository also includes a root `Dockerfile` and `render.yaml` for anyone
 who prefers a container-hosted demo.
@@ -170,9 +174,11 @@ python -m unittest discover -s tests -v
 ```
 
 The `examples/` directory deliberately separates evidence from illustration:
-`decision-record.json` is the earlier recorded DataHub 1.6 MCP/write-back run,
-while `analytics-agent-contract.json` is clearly labeled as a non-live example
-of the new Analytics Agent payload shape.
+`live-revalidation-proof.json` records the final live MCP, Analytics Agent,
+write-back, and revalidation proof; `decision-record.json` is the earlier
+recorded DataHub 1.6 MCP/write-back run; and
+`analytics-agent-contract.json` is clearly labeled as a non-live contract
+example.
 
 ## Build milestones
 
