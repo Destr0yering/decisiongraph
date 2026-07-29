@@ -17,9 +17,10 @@ Agents That Do Real Work
 ### Elevator pitch
 
 DecisionGraph turns an AI recommendation into a governed, durable DataHub
-artifact. It reads real dataset context through the official DataHub MCP Server,
-records the evidence behind a decision, requires human approval before writing
-back, and creates a traceable replacement when the source context changes.
+artifact. It reads governed context and lineage through DataHub MCP, asks
+DataHub's open-source Analytics Agent to compute the recommendation, records the
+SQL and result behind the decision, requires human approval before MCP
+write-back, and creates a traceable replacement when source evidence changes.
 
 ### Inspiration
 
@@ -37,25 +38,29 @@ relationships, and recall behavior.
 
 DecisionGraph demonstrates a closed decision-governance loop:
 
-1. The agent reads governed dataset entities and schema fields through the
-   official open-source DataHub MCP Server.
-2. It creates a deterministic recommendation with a persisted context snapshot,
-   explicit dataset URN dependencies, and human-readable evidence.
-3. The recommendation remains pending until a person approves it.
-4. Approval projects a native DataHub Document related to the source datasets.
-5. A simulated freshness or quality event identifies affected decisions and
+1. The agent reads governed entities, schema fields, and downstream lineage
+   through the official open-source DataHub MCP Server.
+2. DataHub's open-source Analytics Agent performs the reorder calculation and
+   returns reproducible SQL, rows, chart output, and context-quality metadata.
+3. DecisionGraph creates a recommendation with both a persisted context
+   snapshot and the Analytics Agent result, plus explicit dataset URN dependencies.
+4. The recommendation remains pending until a person approves it.
+5. Approval calls MCP `save_document`, relates the native DataHub Document to
+   the source datasets, and verifies the result by read-back.
+6. A simulated freshness or quality event identifies affected decisions and
    marks them `REVALIDATION_REQUIRED`.
-6. Revalidation fetches fresh DataHub MCP context and creates a replacement
-   decision linked through a unique `supersedes` relationship.
-7. The original decision and its audit history remain intact.
-8. A side-by-side revision view preserves easy access to the prior and updated
+7. Revalidation fetches fresh DataHub MCP context, reruns Analytics Agent, and
+   creates a replacement decision linked through a unique `supersedes`
+   relationship.
+8. The original decision and its audit history remain intact.
+9. A side-by-side revision view preserves easy access to the prior and updated
    context, highlights field-level changes, and explains the effect on each
    downstream workflow routine.
 
 The included demonstration uses governed inventory and Northeast forecast
-datasets. The recommendation identifies three reorder candidates, confirms
-forecast freshness, and records the ten inventory and forecast fields considered
-by the agent.
+datasets. The credential-free public workflow is explicitly labeled as a
+deterministic fixture. The live path delegates the calculation to DataHub
+Analytics Agent and retains its full auditable output.
 
 ### How we built it
 
@@ -64,10 +69,14 @@ durable SQLite decision ledger.
 
 The DataHub integration has two deliberate boundaries:
 
-- Context reads use the official `mcp-server-datahub` package and its
-  `get_entities` and `list_schema_fields` tools.
-- Approved decisions are written back as native DataHub Documents related to
-  their governed dataset URNs.
+- Context reads use DataHub MCP `get_entities`, `list_schema_fields`, and
+  `get_lineage`.
+- Reorder calculations use the open-source
+  `datahub-project/analytics-agent` conversation and SSE APIs.
+- Approved decisions use MCP `save_document` and are read back with
+  `get_entities`.
+- A version-aware Agent Registry adapter catalogs the agent, governance skill,
+  REST tools, and consumed datasets when a compatible DataHub SDK is installed.
 
 The service stores workflow state, context provenance, audit events, projection
 status, invalidation events, and supersession relationships. Projection failures
@@ -98,11 +107,15 @@ live DataHub 1.6 deployment rather than only mocked endpoints.
 
 - Completed a real MCP-backed decision flow instead of a metadata-only mock.
 - Wrote an approved decision back to DataHub and verified it by readback.
+- Integrated DataHub Analytics Agent without coupling DecisionGraph to an LLM
+  vendor.
+- Added richer entity context and downstream lineage to every live snapshot.
+- Created a reusable evidence-bound Decision Governance skill.
 - Preserved evidence, approval history, invalidation events, and supersession.
 - Ensured MCP failures cannot silently fall back to fixture evidence.
 - Added retry-safe handling so failed projections cannot remain stuck.
 - Verified the complete workflow through the browser and at a mobile viewport.
-- Passed all twelve automated lifecycle and reliability tests.
+- Passed all seventeen automated lifecycle, integration-contract, and reliability tests.
 - Packaged the application with its dashboard assets and full setup instructions.
 
 ### What we learned
@@ -123,20 +136,18 @@ between the old and new decisions.
 - Expand from one decision type to cost, quality, access, and model-risk actions.
 - Add cryptographic evidence hashes and signed approval identities.
 - Support multi-agent review and conflict resolution.
-- Publish a reusable DecisionGraph DataHub skill and upstream documentation.
+- Generalize the live Analytics Agent calculation to more operational decision types.
 
 ### Built with
 
-Python, FastAPI, SQLite, DataHub 1.6, DataHub MCP Server, FastMCP, uv, Docker,
-HTML, CSS, and JavaScript.
+Python, FastAPI, SQLite, DataHub 1.6, DataHub MCP Server, DataHub Agent Context
+Kit, DataHub Analytics Agent, FastMCP, uv, Docker, HTML, CSS, and JavaScript.
 
 ## Required public links
 
-Replace these placeholders before submission:
-
 - Project/demo URL: https://destr0yering.github.io/decisiongraph/
 - Public Apache-2.0 repository: https://github.com/Destr0yering/decisiongraph
-- Public YouTube, Vimeo, or Youku video: `VIDEO_URL_REQUIRED`
+- Public YouTube video: https://youtu.be/uMznzfsk7uw
 
 ## Judge testing instructions
 
@@ -157,16 +168,23 @@ Replace these placeholders before submission:
    relationship remain visible.
 8. Scroll to **Verified DataHub Integration Snapshot**. This clearly labeled
    recorded live-run evidence shows the separate DataHub 1.6 path: official MCP
-   tools, retrieved schema-field counts, `SYNCED` Document projection, Document
-   URN, two related dataset assets, and successful DataHub read-back.
+   tools, retrieved schema-field counts, the Analytics Agent conversation and
+   SQL execution, a 3-to-4-row evidence change, five affected routines,
+   `SYNCED` Document projection, Document URN, two related dataset assets, and
+   successful DataHub read-back.
 
 ### Local path
 
 Follow the repository README to start DataHub 1.6, seed the two sample datasets,
 enable the official DataHub MCP context provider, and launch DecisionGraph.
 In this mode, **Run Decision** reports context source `datahub_mcp_server` and
-tools `get_entities` plus `list_schema_fields`; after approval, projection
-becomes `SYNCED` and the record includes its native DataHub Document URN.
+tools `get_entities`, `list_schema_fields`, and `get_lineage`. With MCP
+mutations enabled, approval becomes `SYNCED` and the record includes its native
+DataHub Document URN. Analytics Agent output is only claimed when its separately
+configured service is enabled. The recorded live run used the `fiction-retail`
+engine and local `qwen.gguf` model; DecisionGraph accepted only a successful SQL
+event, rebound the chart to those SQL rows, and derived its displayed answer
+from the same rows.
 
 No paid service or private credential is required for the local quickstart.
 
@@ -177,14 +195,14 @@ No paid service or private credential is required for the local quickstart.
 - [x] Repository contains the full source, assets, examples, and setup instructions.
 - [x] Apache License 2.0 is stored in the root `LICENSE` file.
 - [x] GitHub identifies the root license as Apache-2.0.
-- [ ] Video is publicly visible on YouTube, Vimeo, or Youku.
+- [x] Video is publicly visible on YouTube, Vimeo, or Youku.
 - [x] Video is shorter than three minutes.
 - [x] Video contains visible footage of the working application.
 - [x] Video contains no unlicensed music, franchise imagery, or unrelated marks.
 - [x] Submission description is in English.
 - [x] Sample inputs and decision output are present in `examples/`.
 - [x] DataHub MCP use and DataHub write-back are clearly described.
-- [ ] All three public URLs replace the placeholders above.
+- [x] All three public URLs are present above.
 
 ## Optional feedback-prize draft
 

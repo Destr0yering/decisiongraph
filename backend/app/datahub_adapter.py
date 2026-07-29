@@ -9,8 +9,11 @@ DataHub. Agent-run DataFlow/DataJob projection is the next adapter method.
 from dataclasses import dataclass
 import json
 import os
+import sys
 from urllib.error import URLError
 from urllib.request import Request, urlopen
+
+from .mcp_runtime import datahub_mcp_environment
 
 
 class DataHubUnavailable(RuntimeError):
@@ -21,6 +24,8 @@ class DataHubUnavailable(RuntimeError):
 class DataHubConfig:
     server: str
     token: str | None = None
+    mcp_mutations_enabled: bool = False
+    mcp_package: str = "mcp-server-datahub@0.6.0"
 
     @classmethod
     def from_environment(cls) -> "DataHubConfig | None":
@@ -32,6 +37,13 @@ class DataHubConfig:
             token=(
                 os.getenv("DATAHUB_GMS_TOKEN")
                 or os.getenv("DATAHUB_TOKEN")
+            ),
+            mcp_mutations_enabled=os.getenv(
+                "DATAHUB_MCP_MUTATIONS_ENABLED", ""
+            ).lower()
+            in {"1", "true", "yes", "on"},
+            mcp_package=os.getenv(
+                "DATAHUB_MCP_PACKAGE", "mcp-server-datahub@0.6.0"
             ),
         )
 
@@ -65,7 +77,13 @@ class DataHubAdapter:
         return bool(data.get("me", {}).get("corpUser", {}).get("urn"))
 
     def create_decision_document(
-        self, *, decision_id: str, title: str, summary: str, related_assets: list[str]
+        self,
+        *,
+        decision_id: str,
+        title: str,
+        summary: str,
+        related_assets: list[str],
+        existing_urn: str | None = None,
     ) -> str:
         """Create a compact, searchable DataHub projection for a decision."""
         mutation = """
@@ -105,3 +123,102 @@ class DataHubAdapter:
         data = self._graphql(query, {"urn": urn})
         document = data.get("document")
         return document if isinstance(document, dict) else None
+
+
+class DataHubMCPAdapter(DataHubAdapter):
+    """Persist approved decisions with the official MCP save_document tool."""
+
+    async def create_decision_document(
+        self,
+        *,
+        decision_id: str,
+        title: str,
+        summary: str,
+        related_assets: list[str],
+        existing_urn: str | None = None,
+    ) -> str:
+        try:
+            from fastmcp import Client
+            from fastmcp.client.transports import StdioTransport
+        except ImportError as error:
+            raise DataHubUnavailable(
+                "FastMCP is required for MCP document write-back"
+            ) from error
+
+        environment = datahub_mcp_environment(
+            gms_url=self.config.server,
+            gms_token=self.config.token,
+            mutations_enabled=True,
+            save_document_enabled=True,
+        )
+        transport = StdioTransport(
+            command=sys.executable,
+            args=[
+                "-m",
+                "uv",
+                "tool",
+                "run",
+                self.config.mcp_package,
+            ],
+            env=environment,
+            keep_alive=False,
+        )
+        parameters: dict[str, object] = {
+            "document_type": "Decision",
+            "title": title,
+            "content": summary,
+            "topics": [
+                "decisiongraph",
+                "governed-decision",
+                "approved",
+            ],
+            "related_assets": related_assets,
+        }
+        if existing_urn:
+            parameters["urn"] = existing_urn
+
+        try:
+            async with Client(transport) as client:
+                result = await client.call_tool("save_document", parameters)
+                data = getattr(result, "data", None)
+                if bool(getattr(result, "is_error", False)) or not isinstance(
+                    data, dict
+                ):
+                    raise DataHubUnavailable(
+                        "DataHub MCP save_document returned no result"
+                    )
+                if not data.get("success") or not data.get("urn"):
+                    raise DataHubUnavailable(
+                        str(data.get("message") or "DataHub document save failed")
+                    )
+                urn = str(data["urn"])
+                readback = await client.call_tool(
+                    "get_entities", {"urns": [urn]}
+                )
+                readback_data = getattr(readback, "data", None)
+                if bool(getattr(readback, "is_error", False)) or not isinstance(
+                    readback_data, list
+                ):
+                    raise DataHubUnavailable(
+                        "DataHub MCP could not verify the saved Document"
+                    )
+                if not any(
+                    isinstance(item, dict) and item.get("urn") == urn
+                    for item in readback_data
+                ):
+                    raise DataHubUnavailable(
+                        "Saved DataHub Document was not returned by read-back"
+                    )
+                return urn
+        except DataHubUnavailable:
+            raise
+        except Exception as error:
+            raise DataHubUnavailable(
+                f"DataHub MCP document write-back failed: {error}"
+            ) from error
+
+
+def datahub_adapter_from_config(config: DataHubConfig) -> DataHubAdapter:
+    if config.mcp_mutations_enabled:
+        return DataHubMCPAdapter(config)
+    return DataHubAdapter(config)

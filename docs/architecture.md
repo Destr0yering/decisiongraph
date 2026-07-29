@@ -6,10 +6,11 @@ DecisionGraph is a modular monolith:
 
 ```text
 Dashboard -> FastAPI API -> Decision workflow + impact analyzer -> local ledger
-                            |                    |            |
-                            |                    +-- MCP client+-> official
-                            |                                  |   DataHub MCP
-                            +---- DataHub adapter/outbox -------+-> DataHub
+                            |         |          |            |
+                            |         |          +-- MCP client+-> DataHub MCP
+                            |         +------------ HTTP/SSE ----> DataHub
+                            |                                        Analytics Agent
+                            +---- approval/outbox -- save_document -> DataHub
 ```
 
 DataHub is authoritative for discovered metadata, schemas, asset lineage,
@@ -26,7 +27,13 @@ record is retired as `SUPERSEDED`.
 
 ## Demo guarantees
 
-- MCP mode invokes the official `get_entities` and `list_schema_fields` tools.
+- MCP mode invokes `get_entities`, `list_schema_fields`, and `get_lineage`.
+- The context snapshot retains entity metadata, health, governance
+  classifications, and downstream lineage—not just display summaries.
+- Analytics Agent mode persists the conversation id, query engine, tool calls,
+  generated SQL, returned rows, chart specification, and context-quality result.
+- A configured MCP or Analytics Agent failure is surfaced and never silently
+  replaced with fixture evidence.
 - Offline mode is explicit and records `deterministic_fixture` as its context source.
 - Evidence contains concise facts, assumptions, warnings, and citations—never private reasoning.
 - Approval is a separate human action.
@@ -36,6 +43,7 @@ record is retired as `SUPERSEDED`.
 - Every revision pair exposes the complete prior and current records, field-level
   context changes, and an explicit map from those changes to affected workflow
   routines.
+- Analytics changes explicitly trigger `run_analytics_agent` in that impact map.
 - Every invalidation signal is durable even when it impacts zero decisions.
 
 ## Revision comparison and routine impact
@@ -59,7 +67,8 @@ Before claiming a final mapping, validate it against the target DataHub release:
 
 1. Read an asset, schema, lineage, owner, and quality signal.
 2. Create an agent-run projection using supported DataFlow/DataJob capabilities.
-3. Publish a compact Decision Document and supported associations to its source asset.
+3. Publish a compact Decision Document with MCP `save_document` and supported
+   associations to its source assets.
 4. Re-read the projection and verify the relationship in the DataHub UI/API.
 
 If custom relationships are unavailable, retain the precise dependency edges in DecisionGraph and project a supported Document plus source URNs to DataHub.
@@ -92,3 +101,19 @@ Approval and DataHub projection are separate persisted facts:
 
 This prevents an external outage from losing an approval and provides a small,
 inspectable outbox state for the hackathon MVP.
+
+## Agent Context Kit and Agent Registry
+
+DecisionGraph includes the official `datahub-agent-context` package and a
+version-aware registry adapter. When the installed DataHub SDK exposes the
+current Agent Registry entity APIs, the adapter emits:
+
+- five REST endpoint tools;
+- the `evidence-bound-decision-governance` skill;
+- the `DecisionGraph` AI Agent;
+- agent-to-tool and agent-to-skill dependencies;
+- consumed-dataset lineage to the inventory and forecast assets.
+
+DataHub 1.6's released Python SDK does not contain the Agent Registry entity
+classes currently documented on DataHub main. DecisionGraph detects that
+boundary and returns `sdk_unavailable`; it does not report a false registration.

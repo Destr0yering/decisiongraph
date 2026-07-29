@@ -9,24 +9,28 @@ approved decision records back as native DataHub Documents.
 
 ## MVP scope
 
-1. Retrieve dataset metadata and schemas with the official DataHub MCP Server.
-2. Create a deterministic, evidence-grounded decision with explicit DataHub URN dependencies.
-3. Require approval before it becomes approved.
-4. Simulate a freshness or quality event and find every dependent decision.
-5. Mark impacted decisions `REVALIDATION_REQUIRED`.
-6. Re-fetch DataHub MCP context and link the replacement as a superseding revision.
+1. Retrieve rich entity context, schemas, and downstream lineage with DataHub MCP.
+2. Ask DataHub's open-source Analytics Agent to compute the reorder recommendation
+   and preserve its SQL, rows, chart, quality score, and conversation provenance.
+3. Create an evidence-grounded decision with explicit DataHub URN dependencies.
+4. Require approval before the decision can be written to DataHub.
+5. Persist the approved record with MCP `save_document` and verify it by read-back.
+6. Detect changed evidence, highlight its downstream routine impact, and create a
+   replacement revision without destroying the prior record.
 
 DataHub remains the source of truth for metadata and lineage. DecisionGraph keeps workflow state, audit history, and retry-safe projections locally, then mirrors supported records and associations back to DataHub.
 
 ## Initial API
 
 The FastAPI service is in `backend/`. It does not require an LLM: the agent
-workflow is deterministic and its context source is explicit. With
+workflow keeps its context and analytics sources explicit. With
 `DATAHUB_MCP_ENABLED=true`, decision creation invokes the official MCP tools
-`get_entities` and `list_schema_fields`. When `DATAHUB_GMS_URL` is configured, approval
-automatically creates a native DataHub Document related to the decision's source
-dataset URNs. Workflow state and audit history are durable in SQLite. The root
-route serves a built-in browser dashboard for the live demo workflow.
+`get_entities`, `list_schema_fields`, and `get_lineage`. With
+`ANALYTICS_AGENT_ENABLED=true`, the calculation is delegated to
+[`datahub-project/analytics-agent`](https://github.com/datahub-project/analytics-agent).
+When `DATAHUB_MCP_MUTATIONS_ENABLED=true`, approval uses MCP `save_document`
+and reads the new Document back; otherwise the existing GraphQL projection
+adapter remains available. Workflow state and audit history are durable in SQLite.
 
 ```text
 POST /api/v1/decisions/run
@@ -40,6 +44,9 @@ GET  /api/v1/decisions/{decision_id}
 GET  /api/v1/decisions/{decision_id}/audit
 GET  /api/v1/decisions/{decision_id}/comparison
 GET  /api/v1/datahub/health
+GET  /api/v1/analytics-agent/health
+GET  /api/v1/datahub/agent-registry
+POST /api/v1/datahub/agent-registry
 GET  /health
 ```
 
@@ -77,8 +84,38 @@ downstream routines must retrieve context, rebuild the recommendation, request
 approval, monitor dependencies, or project a new DataHub Document.
 
 The first MCP-backed run may take longer while `uv` prepares the isolated
-official `mcp-server-datahub` environment. Mutation tools are disabled for this
-connection; DecisionGraph uses the MCP server only for governed context reads.
+official `mcp-server-datahub` environment.
+
+To make the reorder calculation with DataHub's Analytics Agent, start the
+[open-source Analytics Agent](https://github.com/datahub-project/analytics-agent)
+with a configured query engine, then set:
+
+```powershell
+$env:ANALYTICS_AGENT_ENABLED = "true"
+$env:ANALYTICS_AGENT_URL = "http://localhost:8100"
+$env:ANALYTICS_AGENT_ENGINE = "your-configured-engine-name"
+```
+
+DecisionGraph creates an Analytics Agent conversation, streams the result,
+stores the generated SQL and returned rows, captures the Vega-Lite chart and
+context-quality score, and reruns that analysis for each revalidation revision.
+A configured failure is surfaced; it never silently becomes fixture output.
+
+To approve the MCP write-back path:
+
+```powershell
+$env:DATAHUB_MCP_MUTATIONS_ENABLED = "true"
+```
+
+Approval then calls `save_document` with the governed dataset URNs as related
+assets and immediately verifies the returned Document with `get_entities`.
+
+The Agent Registry endpoint catalogs DecisionGraph, five REST tools, the generic
+governance skill, and both consumed datasets when the installed DataHub SDK
+contains `datahub.api.entities.agent`. The released DataHub 1.6 Python SDK used
+by the local quickstart does not yet contain those current-main Agent Registry
+entities, so the endpoint reports `sdk_unavailable` instead of claiming a
+registration. It is ready for a compatible SDK/server release.
 
 Without `DATAHUB_MCP_ENABLED`, decisions use the explicit
 `deterministic_fixture` context source. Without `DATAHUB_GMS_URL`, decisions
@@ -95,6 +132,8 @@ The public judge demo is hosted without billing details through GitHub Pages:
 
 **[Open the DecisionGraph judge demo](https://destr0yering.github.io/decisiongraph/)**
 
+**[Watch the public 2:57 demonstration video](https://youtu.be/uMznzfsk7uw)**
+
 The browser demo intentionally runs without private credentials and labels its
 context source as `deterministic_fixture`. It demonstrates the complete
 decision, approval, invalidation, revalidation, supersession, and audit workflow
@@ -106,10 +145,12 @@ DataHub Documents.
 
 The public page also includes a clearly labeled **recorded live integration
 snapshot** from the verified local DataHub 1.6 run. It exposes the MCP context
-source and tools, retrieved field counts, native Document URN, `SYNCED`
-projection result, related dataset assets, and successful read-back. This
-evidence panel does not claim that the browser-local workflow is connected to
-DataHub.
+source and tools, retrieved field counts, the real Analytics Agent conversation
+and SQL result, the live 3-to-4-row revalidation, affected routines, native
+Document URN, `SYNCED` projection result, related dataset assets, and successful
+read-back. The chart and displayed answer are rebound to the authoritative SQL
+rows before persistence. This evidence panel does not claim that the
+browser-local workflow is connected to DataHub.
 
 The repository also includes a root `Dockerfile` and `render.yaml` for anyone
 who prefers a container-hosted demo.
@@ -132,6 +173,13 @@ cd backend
 python -m unittest discover -s tests -v
 ```
 
+The `examples/` directory deliberately separates evidence from illustration:
+`live-revalidation-proof.json` records the final live MCP, Analytics Agent,
+write-back, and revalidation proof; `decision-record.json` is the earlier
+recorded DataHub 1.6 MCP/write-back run; and
+`analytics-agent-contract.json` is clearly labeled as a non-live contract
+example.
+
 ## Build milestones
 
 - [x] Architecture and governing state-machine decisions
@@ -143,6 +191,11 @@ python -m unittest discover -s tests -v
 - [x] Dashboard and visual lineage view
 - [x] Official DataHub MCP Server context retrieval
 - [x] MCP-backed revalidation with persisted context snapshots
+- [x] Downstream `get_lineage` and richer entity context snapshots
+- [x] DataHub Analytics Agent conversation/SSE integration
+- [x] Approval-gated MCP `save_document` with read-back verification
+- [x] Agent Context Kit dependency and version-aware Agent Registry adapter
+- [x] Generic DataHub Decision Governance skill
 - [x] Durable invalidation-event ledger
 - [x] Demo video and submission copy
 - [x] Public repository and judge-accessible demo URL

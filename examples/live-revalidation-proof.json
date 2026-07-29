@@ -62,7 +62,6 @@
     "urn:li:dataset:(urn:li:dataPlatform:demo,fiction_retail.inventory,PROD)",
     "urn:li:dataset:(urn:li:dataPlatform:demo,fiction_retail.northeast_forecast,PROD)"
   ],
-  "show_in_global_context": true,
   "read_back_verified": true,
   "automated_tests_passed": 17,
   "disclosure": "Recorded verification snapshot from a local live DataHub 1.6 integration run using DataHub MCP and DataHub Analytics Agent. The GitHub Pages workflow remains deterministic and browser-local."

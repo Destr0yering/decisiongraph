@@ -34,6 +34,20 @@ class DecisionContext(BaseModel):
     snapshot: dict[str, object] = Field(default_factory=dict)
 
 
+class ReorderAnalysis(BaseModel):
+    source: str
+    question: str
+    conversation_id: str | None = None
+    engine_name: str | None = None
+    answer: str
+    sql: str | None = None
+    columns: list[str] = Field(default_factory=list)
+    rows: list[dict[str, object]] = Field(default_factory=list)
+    chart: dict[str, object] | None = None
+    context_quality: dict[str, object] | None = None
+    tool_calls: list[str] = Field(default_factory=list)
+
+
 class Decision(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     title: str
@@ -42,6 +56,7 @@ class Decision(BaseModel):
     evidence: list[str]
     dependencies: list[Dependency]
     context: DecisionContext | None = None
+    analysis: ReorderAnalysis | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     approved_at: datetime | None = None
     supersedes: UUID | None = None
@@ -80,3 +95,10 @@ class DecisionComparison(BaseModel):
     current: Decision
     changes: list[FieldChange] = Field(default_factory=list)
     routine_impacts: list[RoutineImpact] = Field(default_factory=list)
+
+
+class AgentRegistration(BaseModel):
+    agent_urn: str
+    skill_urn: str
+    tool_urns: list[str]
+    consumed_dataset_urns: list[str]

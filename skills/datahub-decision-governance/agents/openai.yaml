@@ -1,0 +1,4 @@
+interface:
+  display_name: "DataHub Decision Governance"
+  short_description: "Govern evidence-bound operational decisions"
+  default_prompt: "Use $datahub-decision-governance to create, approve, persist, and revalidate a decision grounded in DataHub context."

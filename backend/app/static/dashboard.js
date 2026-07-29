@@ -50,6 +50,9 @@ const elements = {
   proofSchemaFields: document.getElementById("proofSchemaFields"),
   proofProjectionStatus: document.getElementById("proofProjectionStatus"),
   proofReadBack: document.getElementById("proofReadBack"),
+  proofAnalyticsAgent: document.getElementById("proofAnalyticsAgent"),
+  proofRowChange: document.getElementById("proofRowChange"),
+  proofRoutineCount: document.getElementById("proofRoutineCount"),
   proofDocumentUrn: document.getElementById("proofDocumentUrn"),
   proofContextFacts: document.getElementById("proofContextFacts"),
   proofRelatedAssets: document.getElementById("proofRelatedAssets"),
@@ -68,6 +71,18 @@ const elements = {
   currentRevisionFacts: document.getElementById("currentRevisionFacts"),
   changeList: document.getElementById("changeList"),
   routineImpactList: document.getElementById("routineImpactList"),
+  analysisSource: document.getElementById("analysisSource"),
+  analysisQuality: document.getElementById("analysisQuality"),
+  analysisConversation: document.getElementById("analysisConversation"),
+  analysisRows: document.getElementById("analysisRows"),
+  analysisAnswer: document.getElementById("analysisAnswer"),
+  analysisSql: document.getElementById("analysisSql"),
+  agentRegistryStatus: document.getElementById("agentRegistryStatus"),
+  agentRegistryDetail: document.getElementById("agentRegistryDetail"),
+  agentRegistryUrn: document.getElementById("agentRegistryUrn"),
+  agentSkillUrn: document.getElementById("agentSkillUrn"),
+  agentToolCount: document.getElementById("agentToolCount"),
+  registerAgentButton: document.getElementById("registerAgentButton"),
 };
 
 function statusPill(status) {
@@ -89,6 +104,17 @@ function formatChangeValue(value) {
   const rendered =
     typeof value === "string" ? value : JSON.stringify(value, null, 2);
   return rendered.length > 600 ? `${rendered.slice(0, 597)}…` : rendered;
+}
+
+function formatComparisonValue(path, value) {
+  if (path === "analysis.rows" && Array.isArray(value)) {
+    const rows = value.map(
+      (row) =>
+        `${row.product_id}: on hand ${row.on_hand_units}, forecast ${row.forecast_units}, reorder ${row.recommended_reorder_quantity}`
+    );
+    return `${value.length} verified SQL rows\n${rows.join("\n")}`;
+  }
+  return formatChangeValue(value);
 }
 
 function contextFacts(decision) {
@@ -242,15 +268,25 @@ async function renderComparison(decision) {
     elements.currentRevisionFacts.innerHTML = contextFacts(current)
       .map((fact) => `<li>${escapeHtml(fact)}</li>`)
       .join("");
-    elements.changeList.innerHTML = changes.length
-      ? changes
+    const changePriority = new Map([
+      ["analysis.rows", 0],
+      ["context.facts", 1],
+      ["summary", 2],
+    ]);
+    const orderedChanges = [...changes].sort(
+      (left, right) =>
+        (changePriority.get(left.path) ?? 10) -
+        (changePriority.get(right.path) ?? 10)
+    );
+    elements.changeList.innerHTML = orderedChanges.length
+      ? orderedChanges
           .map(
             (change) => `
               <article class="change-row">
                 <div class="change-path">${escapeHtml(change.path)}</div>
                 <div class="change-values">
-                  <div class="change-before"><strong>Prior</strong><br>${escapeHtml(formatChangeValue(change.before))}</div>
-                  <div class="change-after"><strong>Updated</strong><br>${escapeHtml(formatChangeValue(change.after))}</div>
+                  <div class="change-before"><strong>Prior</strong><br>${escapeHtml(formatComparisonValue(change.path, change.before))}</div>
+                  <div class="change-after"><strong>Updated</strong><br>${escapeHtml(formatComparisonValue(change.path, change.after))}</div>
                 </div>
               </article>
             `
@@ -302,6 +338,12 @@ function renderDecisionDetail() {
     elements.dependencyList.innerHTML =
       '<div class="empty-state">Dependency trace appears here.</div>';
     elements.evidenceList.innerHTML = "";
+    elements.analysisSource.textContent = "Not run";
+    elements.analysisQuality.textContent = "Not assessed";
+    elements.analysisConversation.textContent = "None";
+    elements.analysisRows.textContent = "0";
+    elements.analysisAnswer.textContent = "No analytics result is attached.";
+    elements.analysisSql.textContent = "-- SQL appears here";
     void renderAudit(null);
     void renderComparison(null);
     return;
@@ -336,6 +378,18 @@ function renderDecisionDetail() {
   elements.evidenceList.innerHTML = decision.evidence
     .map((fact) => `<li>${escapeHtml(fact)}</li>`)
     .join("");
+  const analysis = decision.analysis;
+  elements.analysisSource.textContent =
+    analysis?.source?.replaceAll("_", " ") || "Not run";
+  elements.analysisQuality.textContent =
+    analysis?.context_quality?.label || "Not assessed";
+  elements.analysisConversation.textContent =
+    analysis?.conversation_id || "Fixture";
+  elements.analysisRows.textContent = String(analysis?.rows?.length || 0);
+  elements.analysisAnswer.textContent =
+    analysis?.answer || "No analytics result is attached.";
+  elements.analysisSql.textContent =
+    analysis?.sql || "-- SQL was not recorded";
   void renderAudit(decision);
   void renderComparison(decision);
 }
@@ -374,6 +428,35 @@ async function loadAppHealth() {
         : "Deterministic demo";
 }
 
+function renderAgentRegistry(payload) {
+  const registered =
+    payload.status === "registered" || Boolean(payload.agent_urn);
+  elements.agentRegistryStatus.textContent = registered
+    ? "Registered"
+    : payload.status === "sdk_unavailable"
+      ? "SDK unavailable"
+      : "Not registered";
+  elements.agentRegistryDetail.textContent =
+    payload.detail ||
+    (registered
+      ? "DecisionGraph, its governance skill, tools, and consumed datasets are cataloged in DataHub."
+      : "Ready to register DecisionGraph when DataHub is connected.");
+  elements.agentRegistryUrn.textContent = payload.agent_urn || "—";
+  elements.agentSkillUrn.textContent = payload.skill_urn || "—";
+  elements.agentToolCount.textContent = String(payload.tool_urns?.length || 0);
+  elements.registerAgentButton.disabled =
+    payload.status === "sdk_unavailable" || registered;
+}
+
+async function loadAgentRegistry() {
+  try {
+    const payload = await fetchJson(apiUrl("api/v1/datahub/agent-registry"));
+    renderAgentRegistry(payload);
+  } catch (error) {
+    elements.agentRegistryStatus.textContent = error.message;
+  }
+}
+
 async function loadIntegrationProof() {
   try {
     const response = await fetch(apiUrl("assets/integration-proof.json"));
@@ -395,6 +478,12 @@ async function loadIntegrationProof() {
     elements.proofReadBack.textContent = proof.read_back_verified
       ? "VERIFIED"
       : "NOT VERIFIED";
+    elements.proofAnalyticsAgent.textContent =
+      `${proof.analytics.source} · ${proof.analytics.engine}`;
+    elements.proofRowChange.textContent =
+      `${proof.analytics.prior_row_count} → ${proof.analytics.updated_row_count} SQL rows`;
+    elements.proofRoutineCount.textContent =
+      `${proof.lifecycle.affected_routines.length} routines`;
     elements.proofDocumentUrn.textContent = proof.datahub_document_urn;
     elements.proofContextFacts.innerHTML = proof.context_facts
       .map((fact) => `<li>${escapeHtml(fact)}</li>`)
@@ -473,12 +562,23 @@ elements.invalidateButton.addEventListener("click", () => {
   );
 });
 
+elements.registerAgentButton.addEventListener("click", () =>
+  act("Registering DecisionGraph in DataHub", async () => {
+    const payload = await fetchJson(apiUrl("api/v1/datahub/agent-registry"), {
+      method: "POST",
+    });
+    renderAgentRegistry(payload);
+    return selectedDecision();
+  })
+);
+
 async function boot() {
   await Promise.all([
     refreshState(),
     loadDataHubHealth(),
     loadAppHealth(),
     loadIntegrationProof(),
+    loadAgentRegistry(),
   ]);
 }
 

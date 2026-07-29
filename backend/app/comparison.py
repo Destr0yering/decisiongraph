@@ -115,6 +115,26 @@ def compare_decisions(prior: Decision, current: Decision) -> DecisionComparison:
             )
         )
 
+    prior_analysis = (
+        prior.analysis.model_dump(mode="json") if prior.analysis else None
+    )
+    current_analysis = (
+        current.analysis.model_dump(mode="json") if current.analysis else None
+    )
+    # Charts are derived views. Compare their authoritative SQL rows instead
+    # of surfacing model-generated chart internals as evidence changes.
+    if prior_analysis:
+        prior_analysis.pop("chart", None)
+    if current_analysis:
+        current_analysis.pop("chart", None)
+    changes.extend(
+        _snapshot_changes(
+            prior_analysis,
+            current_analysis,
+            path="analysis",
+        )
+    )
+
     changed_paths = [change.path for change in changes]
     context_paths = [
         path for path in changed_paths if path.startswith("context")
@@ -131,14 +151,29 @@ def compare_decisions(prior: Decision, current: Decision) -> DecisionComparison:
                 triggered_by=context_paths,
             )
         )
+    analysis_paths = [
+        path for path in changed_paths if path.startswith("analysis")
+    ]
+    if analysis_paths:
+        routine_impacts.append(
+            RoutineImpact(
+                routine="run_analytics_agent",
+                effect=(
+                    "Re-run the governed SQL analysis and replace prior result "
+                    "rows, chart, and context-quality evidence."
+                ),
+                triggered_by=analysis_paths,
+            )
+        )
+    if context_paths or analysis_paths:
         routine_impacts.append(
             RoutineImpact(
                 routine="build_recommendation",
                 effect=(
-                    "Recompute the recommendation and evidence from the updated "
-                    "context; do not replay the prior conclusion."
+                    "Recompute the recommendation from the updated DataHub "
+                    "context and Analytics Agent result."
                 ),
-                triggered_by=context_paths,
+                triggered_by=[*context_paths, *analysis_paths],
             )
         )
     dependency_paths = [

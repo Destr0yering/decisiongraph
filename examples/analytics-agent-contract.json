@@ -1,0 +1,57 @@
+{
+  "record_kind": "illustrative_contract_example",
+  "verification_status": "not_a_recorded_live_run",
+  "disclosure": "This file documents the Analytics Agent payload DecisionGraph preserves. Live Analytics Agent provenance is only claimed when ANALYTICS_AGENT_ENABLED is configured and the service returns this data.",
+  "source": "datahub_analytics_agent",
+  "question": "Using only the governed Fiction Retail inventory and Northeast forecast datasets, identify products whose forecast demand exceeds on-hand inventory. Return the product_id, on_hand_units, forecast_units, and recommended_reorder_quantity. Include the SQL and a chart.",
+  "conversation_id": "example-conversation-id",
+  "engine_name": "example-configured-engine",
+  "answer": "Analytics Agent executed the governed SQL query and returned 3 Northeast reorder candidates: SKU-DG-101, SKU-DG-102, SKU-DG-103.",
+  "sql": "SELECT i.product_id, i.on_hand_units, f.forecast_units, f.forecast_units - i.on_hand_units AS recommended_reorder_quantity FROM inventory AS i JOIN northeast_forecast AS f ON i.product_id = f.product_id AND i.region = f.region WHERE i.region = 'Northeast' AND f.forecast_units > i.on_hand_units",
+  "columns": [
+    "product_id",
+    "on_hand_units",
+    "forecast_units",
+    "recommended_reorder_quantity"
+  ],
+  "rows": [
+    {
+      "product_id": "SKU-DG-101",
+      "on_hand_units": 60,
+      "forecast_units": 140,
+      "recommended_reorder_quantity": 80
+    },
+    {
+      "product_id": "SKU-DG-102",
+      "on_hand_units": 45,
+      "forecast_units": 115,
+      "recommended_reorder_quantity": 70
+    },
+    {
+      "product_id": "SKU-DG-103",
+      "on_hand_units": 30,
+      "forecast_units": 92,
+      "recommended_reorder_quantity": 62
+    }
+  ],
+  "chart": {
+    "mark": "bar",
+    "encoding": {
+      "x": {
+        "field": "product_id",
+        "type": "nominal"
+      },
+      "y": {
+        "field": "recommended_reorder_quantity",
+        "type": "quantitative"
+      }
+    }
+  },
+  "context_quality": {
+    "score": 5,
+    "label": "Illustrative"
+  },
+  "tool_calls": [
+    "execute_sql"
+  ]
+}

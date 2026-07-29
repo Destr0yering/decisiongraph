@@ -221,6 +221,11 @@ button {
   grid-column: 1 / -1;
 }
 
+.panel-registry {
+  grid-column: 1 / -1;
+  border-color: rgba(177, 148, 216, 0.34);
+}
+
 .panel-change {
   grid-column: 1 / -1;
   border-color: rgba(177, 148, 216, 0.3);
@@ -486,6 +491,23 @@ button {
 
 .detail-card p {
   margin: 10px 0 0;
+}
+
+.analytics-card {
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+
+.analysis-sql {
+  max-height: 220px;
+  margin: 14px 0 0;
+  padding: 14px;
+  overflow: auto;
+  border-radius: 18px;
+  background: rgba(10, 11, 18, 0.5);
+  color: var(--cyan);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .action-row {
