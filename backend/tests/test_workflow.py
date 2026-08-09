@@ -1,16 +1,22 @@
 import asyncio
+import json
 import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
-from app.datahub_adapter import DataHubUnavailable
+from app.datahub_adapter import (
+    DataHubUnavailable,
+    DataHubVerificationUnavailable,
+)
 from app.analytics_agent import (
     AnalyticsAgentClient,
     AnalyticsAgentConfig,
     AnalyticsUnavailable,
+    REORDER_SQL,
 )
 from app.main import create_app
 from app.mcp_context import ContextUnavailable
@@ -71,6 +77,22 @@ class FlakyAdapter(SuccessfulAdapter):
 class TimeoutAdapter(SuccessfulAdapter):
     def create_decision_document(self, **_kwargs) -> str:
         raise TimeoutError("socket timed out")
+
+
+class VerificationFlakyAdapter(SuccessfulAdapter):
+    attempts = 0
+    urn: str | None = None
+
+    def create_decision_document(self, *, decision_id: str, existing_urn=None, **kwargs):
+        type(self).attempts += 1
+        expected_urn = f"urn:li:document:decisiongraph-{decision_id}"
+        if type(self).attempts == 1:
+            type(self).urn = expected_urn
+            raise DataHubVerificationUnavailable(
+                "read-back temporarily unavailable", expected_urn
+            )
+        assert existing_urn == type(self).urn
+        return expected_urn
 
 
 class FalseHealthAdapter(SuccessfulAdapter):
@@ -305,6 +327,33 @@ class DecisionWorkflowTests(unittest.TestCase):
         self.assertEqual(retried.json()["projection_status"], "SYNCED")
         self.assertIsNone(retried.json()["projection_error"])
 
+        VerificationFlakyAdapter.attempts = 0
+        VerificationFlakyAdapter.urn = None
+        verification_client = TestClient(
+            create_app(
+                db_path=Path(self.temp_dir.name) / "verification.db",
+                adapter_factory=VerificationFlakyAdapter,
+            )
+        )
+        verification_id = verification_client.post(
+            "/api/v1/decisions/run"
+        ).json()["id"]
+        first = verification_client.post(
+            f"/api/v1/decisions/{verification_id}/approve"
+        ).json()
+        self.assertEqual(first["projection_status"], "RETRY_REQUIRED")
+        self.assertEqual(first["datahub_urn"], VerificationFlakyAdapter.urn)
+        second = verification_client.post(
+            f"/api/v1/decisions/{verification_id}/sync"
+        )
+        self.assertEqual(second.json()["projection_status"], "SYNCED")
+        self.assertEqual(VerificationFlakyAdapter.attempts, 2)
+        idempotent = verification_client.post(
+            f"/api/v1/decisions/{verification_id}/sync"
+        )
+        self.assertEqual(idempotent.status_code, 200)
+        self.assertEqual(VerificationFlakyAdapter.attempts, 2)
+
     def test_unexpected_projection_timeout_becomes_retry_required(self) -> None:
         os.environ["DATAHUB_GMS_URL"] = "http://datahub.test"
         client = TestClient(
@@ -330,6 +379,17 @@ class DecisionWorkflowTests(unittest.TestCase):
         )
         response = client.get("/api/v1/datahub/health")
         self.assertEqual(response.status_code, 503)
+
+        os.environ["ANALYTICS_AGENT_ENABLED"] = "true"
+        os.environ["ANALYTICS_AGENT_URL"] = "http://analytics.test"
+        os.environ["ANALYTICS_AGENT_ENGINE"] = "warehouse"
+        with patch(
+            "app.main.AnalyticsAgentClient.healthcheck",
+            new=AsyncMock(side_effect=AnalyticsUnavailable("agent offline")),
+        ):
+            analytics_response = client.get("/api/v1/analytics-agent/health")
+        self.assertEqual(analytics_response.status_code, 503)
+        self.assertIn("agent offline", analytics_response.json()["detail"])
 
     def test_mcp_context_is_persisted_and_refetched_for_revalidation(self) -> None:
         MCPContextProvider.calls = 0
@@ -511,7 +571,9 @@ class DecisionWorkflowTests(unittest.TestCase):
                     self_test.assertEqual(accept, "text/event-stream")
                     return (
                         'data: {"event":"TOOL_CALL","payload":{"tool_name":"run_sql"}}\n'
-                        'data: {"event":"SQL","payload":{"sql":"SELECT sku, reorder_quantity FROM governed_reorders","columns":["sku","reorder_quantity"],"rows":[{"sku":"NE-104","reorder_quantity":25}]}}\n'
+                        'data: {"event":"SQL","payload":{"sql":'
+                        + json.dumps(REORDER_SQL)
+                        + ',"columns":["product_id","on_hand_units","forecast_units","recommended_reorder_quantity"],"rows":[{"product_id":"NE-104","on_hand_units":75,"forecast_units":100,"recommended_reorder_quantity":25}]}}\n'
                         'data: {"event":"CHART","payload":{"vega_lite_spec":{"mark":"bar"}}}\n'
                         'data: {"event":"COMPLETE","payload":{"text":"Reorder 25 units."}}\n',
                         "text/event-stream",
@@ -545,13 +607,13 @@ class DecisionWorkflowTests(unittest.TestCase):
         )
         self.assertEqual(analysis.source, "datahub_analytics_agent")
         self.assertEqual(analysis.conversation_id, "conversation-42")
-        self.assertEqual(analysis.sql, "SELECT sku, reorder_quantity FROM governed_reorders")
-        self.assertEqual(analysis.rows[0]["reorder_quantity"], 25)
+        self.assertEqual(analysis.sql, REORDER_SQL)
+        self.assertEqual(analysis.rows[0]["recommended_reorder_quantity"], 25)
         self.assertEqual(
             analysis.answer,
             (
                 "Analytics Agent executed the governed SQL query and returned "
-                "1 Northeast reorder candidates."
+                "1 Northeast reorder candidates: NE-104."
             ),
         )
         self.assertEqual(
@@ -560,13 +622,37 @@ class DecisionWorkflowTests(unittest.TestCase):
                 "mark": "bar",
                 "data": {
                     "values": [
-                        {"sku": "NE-104", "reorder_quantity": 25}
+                        {
+                            "product_id": "NE-104",
+                            "on_hand_units": 75,
+                            "forecast_units": 100,
+                            "recommended_reorder_quantity": 25,
+                        }
                     ]
                 },
             },
         )
         self.assertEqual(analysis.context_quality["score"], 5)
         self.assertEqual(analysis.tool_calls, ["run_sql"])
+
+        class WrongSqlClient(StubAnalyticsAgentClient):
+            def _request(self, method, path, body=None, *, accept="application/json"):
+                raw, content_type = super()._request(
+                    method, path, body, accept=accept
+                )
+                if path.endswith("/messages"):
+                    raw = raw.replace(REORDER_SQL, "SELECT 1")
+                return raw, content_type
+
+        with self.assertRaisesRegex(AnalyticsUnavailable, "governed reorder SQL"):
+            asyncio.run(
+                WrongSqlClient(client.config).analyze_reorder(
+                    DecisionContext(
+                        source="datahub_mcp_server",
+                        facts=["Two governed datasets retrieved."],
+                    )
+                )
+            )
 
     def test_revalidate_conflicts_until_decision_is_invalidated(self) -> None:
         client = TestClient(create_app(db_path=self.db_path))
@@ -621,10 +707,38 @@ class DecisionWorkflowTests(unittest.TestCase):
         )
         self.assertEqual(proof["projection_status"], "SYNCED")
         self.assertTrue(proof["read_back_verified"])
+        self.assertEqual(proof["verification_type"], "recorded_live_integration_and_revalidation_run")
+        self.assertEqual(proof["datahub_version"], "1.6.0")
+        self.assertTrue(proof["verified_at"].endswith("Z"))
+        self.assertTrue(proof["disclosure"])
         self.assertEqual(len(proof["context_facts"]), 3)
+        self.assertEqual(len(proof["datasets"]), 2)
+        self.assertTrue(
+            all(
+                dataset["urn"] and dataset["schema_field_count"] > 0
+                for dataset in proof["datasets"]
+            )
+        )
         self.assertEqual(len(proof["related_assets"]), 2)
         self.assertEqual(proof["analytics"]["updated_row_count"], 4)
+        self.assertEqual(proof["analytics"]["source"], "datahub_analytics_agent")
+        self.assertTrue(proof["analytics"]["conversation_id"])
+        self.assertEqual(proof["analytics"]["tool_calls"], ["execute_sql"])
+        self.assertEqual(
+            set(proof["analytics"]["new_row"]),
+            {
+                "product_id",
+                "on_hand_units",
+                "forecast_units",
+                "recommended_reorder_quantity",
+            },
+        )
         self.assertTrue(proof["analytics"]["sql_rows_and_chart_match"])
+        self.assertEqual(proof["lifecycle"]["prior_status"], "SUPERSEDED")
+        self.assertEqual(proof["lifecycle"]["replacement_status"], "APPROVED")
+        self.assertGreater(proof["lifecycle"]["highlighted_change_count"], 0)
+        self.assertEqual(len(proof["lifecycle"]["affected_routines"]), 5)
+        self.assertTrue(proof["datahub_document_urn"].startswith("urn:li:document:"))
         self.assertEqual(proof["automated_tests_passed"], 17)
 
 

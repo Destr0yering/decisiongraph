@@ -2,12 +2,42 @@
 
 [![DecisionGraph CI](https://github.com/Destr0yering/decisiongraph/actions/workflows/ci.yml/badge.svg)](https://github.com/Destr0yering/decisiongraph/actions/workflows/ci.yml)
 
-DecisionGraph gives AI-assisted decisions traceable evidence, approval history,
-and recall when the DataHub context they depend on changes. It reads governed
-dataset context through the official open-source DataHub MCP Server and writes
-approved decision records back as native DataHub Documents.
+DecisionGraph is an operational data agent that uses DataHub context to calculate
+a reorder action, pauses at an explicit approval gate, writes the approved
+decision back as a native DataHub Document, and recalls it when evidence changes.
+
+**[Try the 60-second judge demo](https://destr0yering.github.io/decisiongraph/)**
+— then select **Replay Live JSON** to animate the verified DataHub 1.6 run.
+[Watch the 2:57 video](https://youtu.be/uMznzfsk7uw) ·
+[Inspect the live proof](examples/live-revalidation-proof.json) ·
+[Browse the examples](examples/)
 
 **Hackathon category:** Agents That Do Real Work
+
+## Quickstart
+
+```console
+docker compose up --build
+```
+
+Open [http://localhost:8000](http://localhost:8000). This credential-free mode
+uses an explicitly labeled deterministic fixture; the verified live DataHub path
+is documented below.
+
+## How DataHub powers the agent
+
+| Agent function | DataHub foundation |
+| --- | --- |
+| Perceive governed reality | MCP `get_entities`, `list_schema_fields`, and `get_lineage` retrieve entity, schema, and blast-radius context. |
+| Calculate an action | DataHub Analytics Agent executes the governed reorder SQL and returns rows, chart output, quality, and conversation provenance. |
+| Act with a gate | An explicit approval action permits MCP `save_document` to create the native DataHub record. |
+| Remember and verify | MCP `get_entities` confirms the returned Document exists; stored dataset URNs and snapshots preserve its evidence. |
+| React to change | Lineage and stored dependencies identify affected decisions, block reuse of stale approval, and require a fresh replacement revision. |
+
+The unhappy path is the point: when governed evidence changes, DecisionGraph
+invalidates the prior approval. The agent cannot reuse that decision; it must
+retrieve fresh context, recalculate, create a linked replacement, and pass the
+approval gate again.
 
 ## MVP scope
 
@@ -15,8 +45,8 @@ approved decision records back as native DataHub Documents.
 2. Ask DataHub's open-source Analytics Agent to compute the reorder recommendation
    and preserve its SQL, rows, chart, quality score, and conversation provenance.
 3. Create an evidence-grounded decision with explicit DataHub URN dependencies.
-4. Require approval before the decision can be written to DataHub.
-5. Persist the approved record with MCP `save_document` and verify it by read-back.
+4. Require an explicit operator approval action before the decision can be written to DataHub.
+5. Persist the approved record with MCP `save_document` and verify the returned Document exists by read-back.
 6. Detect changed evidence, highlight its downstream routine impact, and create a
    replacement revision without destroying the prior record.
 
@@ -32,7 +62,8 @@ workflow keeps its context and analytics sources explicit. With
 [`datahub-project/analytics-agent`](https://github.com/datahub-project/analytics-agent).
 When `DATAHUB_MCP_MUTATIONS_ENABLED=true`, approval uses MCP `save_document`
 and reads the new Document back; otherwise the existing GraphQL projection
-adapter remains available. Workflow state and audit history are durable in SQLite.
+adapter remains available. Workflow state and audit history are durable in local
+SQLite storage.
 
 ```text
 POST /api/v1/decisions/run
@@ -110,7 +141,8 @@ $env:DATAHUB_MCP_MUTATIONS_ENABLED = "true"
 ```
 
 Approval then calls `save_document` with the governed dataset URNs as related
-assets and immediately verifies the returned Document with `get_entities`.
+assets and immediately verifies that the returned Document exists with
+`get_entities`.
 
 DecisionGraph includes an **Agent Registry compatibility adapter**, not a
 completed Agent Registry registration against DataHub 1.6. The adapter prepares
@@ -162,7 +194,8 @@ read-back verification. The replay is recorded evidence; it does not make new
 MCP calls from GitHub Pages.
 
 The repository also includes a root `Dockerfile` and `render.yaml` for anyone
-who prefers a container-hosted demo.
+who prefers a container-hosted fixture demo. The free Render configuration uses
+ephemeral SQLite storage and is not a durable production deployment.
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Destr0yering/decisiongraph)
 
@@ -174,6 +207,14 @@ docker run --rm -p 8000:8000 decisiongraph
 ```
 
 Then open [http://localhost:8000](http://localhost:8000).
+
+## Security boundary
+
+The FastAPI backend is a trusted, single-user hackathon service. Its mutation
+routes do not authenticate an approver identity, so never expose a credentialed
+instance directly to the Internet. GitHub Pages is static and credential-free.
+Production use requires authentication, authorization, signed approval identity,
+durable storage, and secret-managed DataHub credentials.
 
 Run the automated suite:
 

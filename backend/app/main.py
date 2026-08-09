@@ -26,6 +26,7 @@ from .datahub_adapter import (
     DataHubAdapter,
     DataHubConfig,
     DataHubUnavailable,
+    DataHubVerificationUnavailable,
     datahub_adapter_from_config,
 )
 from .mcp_context import (
@@ -117,6 +118,13 @@ def create_app(
                 existing_urn=decision.datahub_urn,
             )
             urn = await result if inspect.isawaitable(result) else result
+        except DataHubVerificationUnavailable as error:
+            return store.set_projection(
+                decision.id,
+                ProjectionStatus.RETRY_REQUIRED,
+                datahub_urn=error.urn,
+                error=str(error)[:240],
+            )
         except Exception as error:
             message = str(error).strip() or type(error).__name__
             return store.set_projection(
@@ -177,7 +185,11 @@ def create_app(
             raise HTTPException(status_code=503, detail=str(error)) from error
         if not config:
             return {"status": "not_configured"}
-        if not await AnalyticsAgentClient(config).healthcheck():
+        try:
+            connected = await AnalyticsAgentClient(config).healthcheck()
+        except AnalyticsUnavailable as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        if not connected:
             raise HTTPException(
                 status_code=503,
                 detail="DataHub Analytics Agent health check failed",
@@ -379,6 +391,16 @@ def create_app(
         if decision.status is not DecisionStatus.APPROVED:
             raise HTTPException(
                 status_code=409, detail="Only approved decisions can be projected"
+            )
+        if decision.projection_status is ProjectionStatus.SYNCED:
+            return decision
+        if decision.projection_status not in {
+            ProjectionStatus.NOT_CONFIGURED,
+            ProjectionStatus.RETRY_REQUIRED,
+        }:
+            raise HTTPException(
+                status_code=409,
+                detail="Decision projection is already in progress",
             )
         return await project(decision)
 

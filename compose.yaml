@@ -1,0 +1,13 @@
+services:
+  decisiongraph:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - decisiongraph-data:/data
+    environment:
+      DECISIONGRAPH_DB_PATH: /data/decisiongraph.db
+      DATAHUB_MCP_ENABLED: "false"
+
+volumes:
+  decisiongraph-data:

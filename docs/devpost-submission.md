@@ -1,5 +1,14 @@
 # DecisionGraph — Devpost submission package
 
+## Judge fast path
+
+**Try DecisionGraph now:** https://destr0yering.github.io/decisiongraph/
+
+Select **Replay Live JSON** to animate the recorded DataHub 1.6 integration,
+including official MCP context retrieval, Analytics Agent SQL execution, a
+3-to-4-row evidence change, the affected routines, approval-gated Document
+write-back, and successful read-back. No credentials or installation required.
+
 ## Submission fields
 
 ### Project name
@@ -16,16 +25,17 @@ Agents That Do Real Work
 
 ### Elevator pitch
 
-DecisionGraph turns an AI recommendation into a governed, durable DataHub
-artifact. It reads governed context and lineage through DataHub MCP, asks
-DataHub's open-source Analytics Agent to compute the recommendation, records the
-SQL and result behind the decision, requires human approval before MCP
-write-back, and creates a traceable replacement when source evidence changes.
+DecisionGraph is an operational data agent that uses DataHub context to calculate
+a reorder action, pauses at an explicit approval gate, writes the approved
+decision back as a native DataHub Document, and recalls it when evidence changes.
+It preserves the exact MCP context, Analytics Agent SQL and rows, dataset URNs,
+approval event, and replacement history so the next person or agent does not
+have to reconstruct why an action was taken.
 
 ### Inspiration
 
-AI agents are increasingly capable of recommending operational actions, but the
-recommendation is often separated from the governed context that produced it.
+AI agents can do operational work, but without durable governed memory they can
+repeat stale actions or lose the evidence that made an action safe.
 That creates four difficult questions: Which data shaped the recommendation?
 Who approved it? What action was taken? What happens when the evidence changes?
 
@@ -44,9 +54,11 @@ DecisionGraph demonstrates a closed decision-governance loop:
    returns reproducible SQL, rows, chart output, and context-quality metadata.
 3. DecisionGraph creates a recommendation with both a persisted context
    snapshot and the Analytics Agent result, plus explicit dataset URN dependencies.
-4. The recommendation remains pending until a person approves it.
+4. The recommendation remains pending until an operator performs the explicit
+   approval action.
 5. Approval calls MCP `save_document`, relates the native DataHub Document to
-   the source datasets, and verifies the result by read-back.
+   the source datasets, and verifies that the returned Document exists by
+   read-back.
 6. A simulated freshness or quality event identifies affected decisions and
    marks them `REVALIDATION_REQUIRED`.
 7. Revalidation fetches fresh DataHub MCP context, reruns Analytics Agent, and
@@ -61,6 +73,28 @@ The included demonstration uses governed inventory and Northeast forecast
 datasets. The credential-free public workflow is explicitly labeled as a
 deterministic fixture. The live path delegates the calculation to DataHub
 Analytics Agent and retains its full auditable output.
+
+**Unhappy path:** when governed evidence changes, the prior approval is
+invalidated. DecisionGraph blocks reuse of that old decision and requires a
+fresh DataHub context fetch, Analytics Agent calculation, linked replacement
+revision, and approval action.
+
+### How DataHub powers the agent
+
+- **Perceive:** MCP `get_entities`, `list_schema_fields`, and `get_lineage`
+  provide governed entity, schema, and blast-radius context.
+- **Calculate:** DataHub Analytics Agent executes the governed SQL and returns
+  rows, chart output, quality, and conversation provenance.
+- **Act:** MCP `save_document` creates the native DataHub decision record only
+  after the approval gate.
+- **Remember:** MCP `get_entities` confirms the returned Document exists; stored
+  context snapshots and URNs preserve the decision's evidence.
+- **React:** lineage and dependencies identify affected decisions, trigger
+  revalidation, and link the replacement through `supersedes`.
+
+This directly fits **Agents That Do Real Work**: the agent perceives governed
+reality, calculates an operational reorder, pauses at a controlled action
+boundary, persists the result, and reacts when its evidence becomes stale.
 
 ### How we built it
 
@@ -88,6 +122,12 @@ than silently replaced with fixture data.
 
 The interface uses a retro-future operations-console visual language to make the
 decision lifecycle, provenance, and approval boundary immediately visible.
+
+The backend is a trusted, single-user hackathon service. Approval identity is
+not authenticated, so a credentialed backend must not be exposed directly to
+the Internet. The public GitHub Pages demo is static and credential-free;
+production use requires authentication, authorization, signed identities,
+durable storage, and secret management.
 
 ### Challenges we ran into
 
