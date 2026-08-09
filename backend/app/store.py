@@ -250,6 +250,8 @@ class DecisionStore:
                             "DECISION_SUPERSEDED",
                             {"replacement_decision_id": str(decision.id)},
                         )
+            else:
+                return None
         return self.get(decision_id)
 
     def revalidate(

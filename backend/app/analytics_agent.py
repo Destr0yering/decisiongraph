@@ -35,6 +35,58 @@ REORDER_QUESTION = (
     "so do not call additional catalog or business-context search tools."
 )
 
+REORDER_COLUMNS = {
+    "product_id",
+    "on_hand_units",
+    "forecast_units",
+    "recommended_reorder_quantity",
+}
+
+
+def _canonical_sql(value: object) -> str:
+    return " ".join(str(value).strip().rstrip(";").split()).casefold()
+
+
+def _validate_reorder_result(
+    sql: object, rows: object, events: list[dict[str, object]]
+) -> list[dict[str, object]]:
+    if _canonical_sql(sql) != _canonical_sql(REORDER_SQL):
+        raise AnalyticsUnavailable(
+            "Analytics Agent did not execute the governed reorder SQL exactly"
+        )
+    if not any(event.get("event") == "COMPLETE" for event in events):
+        raise AnalyticsUnavailable(
+            "Analytics Agent stream ended without a COMPLETE event"
+        )
+    if not isinstance(rows, list):
+        raise AnalyticsUnavailable("Analytics Agent SQL rows were malformed")
+
+    normalized: list[dict[str, object]] = []
+    for row in rows:
+        if not isinstance(row, dict) or set(row) != REORDER_COLUMNS:
+            raise AnalyticsUnavailable(
+                "Analytics Agent returned rows outside the governed contract"
+            )
+        values = [
+            row["on_hand_units"],
+            row["forecast_units"],
+            row["recommended_reorder_quantity"],
+        ]
+        if any(
+            isinstance(value, bool) or not isinstance(value, (int, float))
+            for value in values
+        ):
+            raise AnalyticsUnavailable(
+                "Analytics Agent returned non-numeric reorder values"
+            )
+        on_hand, forecast, recommended = values
+        if recommended <= 0 or abs((forecast - on_hand) - recommended) > 1e-9:
+            raise AnalyticsUnavailable(
+                "Analytics Agent returned an invalid reorder calculation"
+            )
+        normalized.append(row)
+    return normalized
+
 
 class AnalyticsUnavailable(RuntimeError):
     """Raised when a configured Analytics Agent cannot complete an analysis."""
@@ -260,12 +312,9 @@ class AnalyticsAgentClient:
             raise AnalyticsUnavailable(
                 "Analytics Agent completed without a SQL result"
             )
-        rows = sql_payload.get("rows", [])
-        if not isinstance(rows, list):
-            rows = []
-        normalized_rows = [
-            row for row in rows if isinstance(row, dict)
-        ]
+        normalized_rows = _validate_reorder_result(
+            sql_payload["sql"], sql_payload.get("rows"), events
+        )
         chart = (
             chart_payload.get("vega_lite_spec")
             if isinstance(chart_payload, dict)

@@ -20,6 +20,14 @@ class DataHubUnavailable(RuntimeError):
     """Raised when an explicitly configured DataHub endpoint cannot be reached."""
 
 
+class DataHubVerificationUnavailable(DataHubUnavailable):
+    """Raised after a Document save succeeds but read-back cannot be verified."""
+
+    def __init__(self, message: str, urn: str):
+        super().__init__(message)
+        self.urn = urn
+
+
 @dataclass(frozen=True)
 class DataHubConfig:
     server: str
@@ -199,15 +207,17 @@ class DataHubMCPAdapter(DataHubAdapter):
                 if bool(getattr(readback, "is_error", False)) or not isinstance(
                     readback_data, list
                 ):
-                    raise DataHubUnavailable(
-                        "DataHub MCP could not verify the saved Document"
+                    raise DataHubVerificationUnavailable(
+                        "DataHub MCP could not verify the saved Document",
+                        urn,
                     )
                 if not any(
                     isinstance(item, dict) and item.get("urn") == urn
                     for item in readback_data
                 ):
-                    raise DataHubUnavailable(
-                        "Saved DataHub Document was not returned by read-back"
+                    raise DataHubVerificationUnavailable(
+                        "Saved DataHub Document was not returned by read-back",
+                        urn,
                     )
                 return urn
         except DataHubUnavailable:

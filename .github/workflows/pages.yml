@@ -15,7 +15,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  validate:
+    name: Validate judge demo artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate JavaScript and replay contract
+        run: |
+          node --check backend/app/static/dashboard.js
+          node --check backend/app/static/static-demo.js
+          python -m json.tool examples/live-revalidation-proof.json > /dev/null
+          cmp examples/live-revalidation-proof.json backend/app/static/live-revalidation-proof.json
+
   deploy:
+    needs: validate
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
