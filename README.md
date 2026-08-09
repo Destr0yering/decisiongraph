@@ -34,10 +34,24 @@ is documented below.
 | Remember and verify | MCP `get_entities` confirms the returned Document exists; stored dataset URNs and snapshots preserve its evidence. |
 | React to change | Lineage and stored dependencies identify affected decisions, block reuse of stale approval, and require a fresh replacement revision. |
 
-The unhappy path is the point: when governed evidence changes, DecisionGraph
-invalidates the prior approval. The agent cannot reuse that decision; it must
-retrieve fresh context, recalculate, create a linked replacement, and pass the
-approval gate again.
+## The four-step agent loop
+
+- **Calculate:** DataHub's Analytics Agent executes the governed SQL and returns
+  the operational recommendation with its rows and provenance.
+- **Gate:** The recommendation pauses until an operator explicitly approves it.
+- **Write-back:** Approval triggers MCP `save_document` to write a native
+  DataHub Document related to the governed source datasets.
+- **Revalidate:** If upstream governed evidence or lineage changes, the agent
+  blocks reuse of the old approval and creates a replacement linked through
+  `supersedes`.
+
+## The Unhappy Path (And Why It Matters)
+
+Watch for this in the video: the approved three-row decision becomes stale after
+the DataHub evidence changes. DecisionGraph highlights the affected routines,
+refuses to treat the prior approval as current, recalculates four rows, and
+requires a newly approved replacement. An agent cannot silently continue acting
+on evidence that is no longer valid.
 
 ## MVP scope
 
@@ -161,18 +175,20 @@ endpoint. Invalidated decisions stay immutable; the revalidation endpoint create
 a new pending revision from freshly retrieved context, and approving that
 replacement retires the older record as `SUPERSEDED`.
 
-## Public judge demo
+## Zero-Config Judge Sandbox
 
-The public judge demo is hosted without billing details through GitHub Pages:
+The public GitHub Pages experience is a purpose-built, credential-free sandbox
+so judges can test the complete lifecycle immediately—no API keys, Docker
+startup, or private DataHub credentials required:
 
 **[Open the DecisionGraph judge demo](https://destr0yering.github.io/decisiongraph/)**
 
 **[Watch the public 2:57 demonstration video](https://youtu.be/uMznzfsk7uw)**
 
-The browser demo intentionally runs without private credentials and labels its
-context source as `deterministic_fixture`. It demonstrates the complete
-decision, approval, invalidation, revalidation, supersession, and audit workflow
-using browser-local storage.
+Its deterministic fixture makes every run reproducible while the interface
+clearly labels sandbox mode and keeps external projection disabled. It
+demonstrates the complete decision, approval, invalidation, revalidation,
+supersession, and audit workflow using browser-local storage.
 
 The full local quickstart above is the authoritative live DataHub MCP path. It
 uses real governed entities and schemas and projects approved decisions back as
