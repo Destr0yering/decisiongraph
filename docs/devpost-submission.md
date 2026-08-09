@@ -17,7 +17,7 @@ DecisionGraph
 
 ### Tagline
 
-Governed decisions in motion: evidence in, approval gated, traceability out.
+Operational data agent: governed context in, approved action and durable memory out.
 
 ### Challenge category
 
@@ -74,10 +74,25 @@ datasets. The credential-free public workflow is explicitly labeled as a
 deterministic fixture. The live path delegates the calculation to DataHub
 Analytics Agent and retains its full auditable output.
 
-**Unhappy path:** when governed evidence changes, the prior approval is
-invalidated. DecisionGraph blocks reuse of that old decision and requires a
-fresh DataHub context fetch, Analytics Agent calculation, linked replacement
-revision, and approval action.
+### The four-step agent loop
+
+- **Calculate:** DataHub's Analytics Agent executes the governed SQL and returns
+  the operational recommendation with its rows and provenance.
+- **Gate:** The recommendation pauses until an operator explicitly approves it.
+- **Write-back:** Approval triggers MCP `save_document` to write a native
+  DataHub Document related to the governed source datasets.
+- **Revalidate:** If upstream governed evidence or lineage changes, the agent
+  blocks reuse of the old approval and creates a replacement linked through
+  `supersedes`.
+
+### The Unhappy Path (And Why It Matters)
+
+**Watch for this in the video:** the approved three-row decision becomes stale
+after the DataHub evidence changes. DecisionGraph highlights the affected
+routines, refuses to treat the prior approval as current, recalculates four
+rows, and requires a newly approved replacement. That is the enterprise
+guardrail: an agent cannot silently continue acting on evidence that is no
+longer valid.
 
 ### How DataHub powers the agent
 
