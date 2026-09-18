@@ -16,3 +16,4 @@ sources/
 artifacts/
 video_build/
 *.mp4
+*.log

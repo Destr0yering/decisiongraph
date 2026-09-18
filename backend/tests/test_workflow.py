@@ -684,7 +684,7 @@ class DecisionWorkflowTests(unittest.TestCase):
         client = TestClient(create_app(db_path=self.db_path))
         response = client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertIn("DecisionGraph Console", response.text)
+        self.assertIn("Your data changed.", response.text)
         self.assertIn("Verified DataHub Integration Snapshot", response.text)
         self.assertIn("Prior Data → Updated Data → Routine Impact", response.text)
         self.assertIn("Replay Live JSON", response.text)

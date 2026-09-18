@@ -36,6 +36,8 @@ jobs:
         run: |
           node --check backend/app/static/dashboard.js
           node --check backend/app/static/static-demo.js
+          node --check backend/app/static/launch-demo.js
+          node scripts/test-static-demo.cjs
       - name: Validate published JSON artifacts
         run: |
           python -m json.tool examples/live-revalidation-proof.json > /dev/null
