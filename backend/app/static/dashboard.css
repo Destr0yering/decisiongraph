@@ -342,6 +342,8 @@ button {
 .change-row,
 .routine-row {
   padding: 12px 14px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .change-path,
