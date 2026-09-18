@@ -3,14 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DecisionGraph Console</title>
-    <link rel="stylesheet" href="./assets/dashboard.css?v=20260728" />
+    <title>DecisionGraph — When evidence changes, decisions should too</title>
+    <meta name="description" content="Trace the evidence behind an AI decision, block stale approvals, and review what changed. Try DecisionGraph's free interactive sandbox." />
+    <meta property="og:title" content="DecisionGraph — Give AI decisions a recall button" />
+    <meta property="og:description" content="Evidence changes. Your AI decision should not stay approved. Explore a complete decision recall in 60 seconds." />
+    <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./assets/dashboard.css?v=20260918b" />
   </head>
   <body>
     <div class="shell">
       <aside class="rail">
         <div class="rail-top">
-          <div class="badge">DG-47</div>
+          <div class="badge">DG</div>
           <div class="stack">
             <span class="stack-label">DecisionGraph</span>
             <span class="stack-subtitle">Lineage Console</span>
@@ -34,12 +38,13 @@
       <main class="bridge">
         <header class="hero">
           <div>
-            <div class="eyebrow">Operational display</div>
-            <h1>Decision lineage, approval, and recall</h1>
+            <div class="eyebrow">DecisionGraph / Evidence before action</div>
+            <h1>Your data changed.<br />Should your AI decision?</h1>
             <p>
-              A calm control surface for tracing AI-assisted decisions through
-              DataHub dependencies and revalidation history.
+              Give every decision a trail of evidence and a recall button.
+              Catch stale approvals, see what changed, and keep the next move in human hands.
             </p>
+            <div class="hero-links"><a href="#guidedDemo">Try the 60-second demo ↘</a><a href="https://github.com/Destr0yering/decisiongraph" target="_blank" rel="noopener">Open-source code ↗</a></div>
           </div>
           <div class="status-cluster">
             <div class="status-card">
@@ -52,6 +57,22 @@
             </div>
           </div>
         </header>
+
+        <section class="launch-demo" id="guidedDemo" aria-labelledby="tourHeading">
+          <div class="tour-heading"><div><div class="eyebrow">An approval has an expiration condition</div><h2 id="tourHeading">Three products. One new fact. A decision recalled.</h2></div><span class="panel-chip">Fictional retail scenario</span></div>
+          <p class="tour-disclosure" id="tourDisclosure">An interactive sandbox. No purchases, external writes, or live model calls.</p>
+          <ol class="tour-stages" aria-label="Decision lifecycle">
+            <li data-tour-step="1"><span>01</span>Calculate</li><li data-tour-step="2"><span>02</span>Approve</li><li data-tour-step="3"><span>03</span>Evidence changes</li><li data-tour-step="4"><span>04</span>Revalidate</li>
+          </ol>
+          <div class="tour-bottom"><div><strong id="tourTitle">Would you act on an outdated recommendation?</strong><p id="tourMessage" role="status" aria-live="polite">Follow one decision from its first recommendation to a new, separately approved revision.</p></div><button class="lcars-button primary" id="tourNext">Start the guided demo</button></div>
+          <div class="tour-result" id="tourResult" hidden></div>
+        </section>
+
+        <section class="astra-section" aria-labelledby="astraHeading">
+          <div><div class="eyebrow">Built with GPT-6 Astra in Codex</div><h2 id="astraHeading">From a diff to a decision review.</h2><p>Astra helped build this revision's guided recall demo, citation validation, and optional API review tool. The tool asks Astra to explain changed evidence and cite its sources. It has no authority to approve a decision.</p></div>
+          <div class="astra-actions"><button class="lcars-button accent" id="astraProofButton">How the review works</button><a href="https://github.com/Destr0yering/decisiongraph/blob/main/docs/astra-challenge.md" target="_blank" rel="noopener">What Astra contributed ↗</a></div>
+          <div id="astraProof" class="astra-proof" hidden aria-live="polite"></div>
+        </section>
 
         <section class="panel-grid">
           <section class="panel panel-list">
@@ -362,7 +383,9 @@
       </main>
     </div>
 
-    <script src="./assets/static-demo.js?v=20260729" defer></script>
-    <script src="./assets/dashboard.js?v=20260729b" defer></script>
+    <script src="./assets/static-demo.js?v=20260918b" defer></script>
+    <script src="./assets/dashboard.js?v=20260918b" defer></script>
+    <script src="./assets/launch-demo.js?v=20260918b" defer></script>
   </body>
 </html>
+

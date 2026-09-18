@@ -27,6 +27,8 @@ jobs:
         run: |
           node --check backend/app/static/dashboard.js
           node --check backend/app/static/static-demo.js
+          node --check backend/app/static/launch-demo.js
+          node scripts/test-static-demo.cjs
           python -m json.tool examples/live-revalidation-proof.json > /dev/null
           cmp examples/live-revalidation-proof.json backend/app/static/live-revalidation-proof.json
 
@@ -45,6 +47,9 @@ jobs:
           cp backend/app/static/dashboard.css _site/assets/dashboard.css
           cp backend/app/static/dashboard.js _site/assets/dashboard.js
           cp backend/app/static/static-demo.js _site/assets/static-demo.js
+          cp backend/app/static/launch-demo.js _site/assets/launch-demo.js
+          cp backend/app/static/icon.svg _site/assets/icon.svg
+          if [ -f backend/app/static/astra-review.json ]; then cp backend/app/static/astra-review.json _site/assets/astra-review.json; fi
           cp examples/live-revalidation-proof.json _site/assets/live-revalidation-proof.json
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5

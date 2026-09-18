@@ -12,7 +12,7 @@ decision back as a native DataHub Document, and recalls it when evidence changes
 [Inspect the live proof](examples/live-revalidation-proof.json) ·
 [Browse the examples](examples/)
 
-**Hackathon category:** Agents That Do Real Work
+**September revision:** [Built with GPT-6 Astra in Codex](docs/astra-challenge.md), with a guided recall walkthrough and an experimental evidence reviewer. The public demo is deterministic; a live Astra API response has not yet been verified. The original DataHub core and video predate this revision.
 
 ## Quickstart
 

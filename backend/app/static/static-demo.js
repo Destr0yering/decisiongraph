@@ -1,5 +1,7 @@
 (function configureStaticJudgeDemo() {
-  if (!window.location.hostname.endsWith("github.io")) {
+  const localPreview = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+    && new URLSearchParams(window.location.search).get("sandbox") === "1";
+  if (!window.location.hostname.endsWith("github.io") && !localPreview) {
     return;
   }
 
@@ -347,6 +349,9 @@
       if (action === "revalidate") {
         if (decision.status !== "REVALIDATION_REQUIRED") {
           throw new Error("Decision must require revalidation");
+        }
+        if (store.decisions.some((item) => item.supersedes === decision.id)) {
+          throw new Error("A replacement already exists; review that revision instead.");
         }
         const replacement = createDecision(decision.id);
         store.decisions.push(replacement);
